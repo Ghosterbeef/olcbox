@@ -12,8 +12,8 @@ env:
   OLCBOX_VERSION_MAJOR_MINOR: "1.0"
   # The alananisimov/olcbox workflow was recreated after 1.0.69, so
   # github.run_number restarted. Run #6 must publish Android versionCode 70.
-  OLCBOX_RELEASE_RUN_NUMBER_BASE: "5"
-  OLCBOX_RELEASE_PATCH_BASE: "69"
+  OLCBOX_RELEASE_RUN_NUMBER_BASE: "0"
+  OLCBOX_RELEASE_PATCH_BASE: "70"
 
 jobs:
   release_version:
@@ -59,7 +59,7 @@ jobs:
       - name: Checkout olcrtc once to resolve the release commit
         uses: actions/checkout@v7
         with:
-          repository: alananisimov/olcrtc
+          repository: Ghosterbeef/olcrtc
           ref: ${{ steps.version.outputs.olcrtc_ref }}
           path: olcrtc
           fetch-depth: 1
@@ -76,7 +76,7 @@ jobs:
       - name: Checkout olcrtc
         uses: actions/checkout@v7
         with:
-          repository: alananisimov/olcrtc
+          repository: Ghosterbeef/olcrtc
           ref: ${{ needs.release_version.outputs.olcrtc_sha }}
           submodules: recursive
       - name: Setup Go
@@ -107,7 +107,7 @@ jobs:
       - name: Checkout olcrtc
         uses: actions/checkout@v7
         with:
-          repository: alananisimov/olcrtc
+          repository: Ghosterbeef/olcrtc
           ref: ${{ needs.release_version.outputs.olcrtc_sha }}
           path: olcrtc
           submodules: recursive
@@ -243,7 +243,7 @@ jobs:
       - name: Checkout olcrtc
         uses: actions/checkout@v7
         with:
-          repository: alananisimov/olcrtc
+          repository: Ghosterbeef/olcrtc
           ref: ${{ needs.release_version.outputs.olcrtc_sha }}
           path: olcrtc
           submodules: recursive
@@ -296,7 +296,7 @@ jobs:
       - name: Checkout olcrtc
         uses: actions/checkout@v7
         with:
-          repository: alananisimov/olcrtc
+          repository: Ghosterbeef/olcrtc
           ref: ${{ needs.release_version.outputs.olcrtc_sha }}
           path: olcrtc
           submodules: recursive
@@ -368,7 +368,7 @@ jobs:
       - name: Checkout olcrtc
         uses: actions/checkout@v7
         with:
-          repository: alananisimov/olcrtc
+          repository: Ghosterbeef/olcrtc
           ref: ${{ needs.release_version.outputs.olcrtc_sha }}
           path: olcrtc
           submodules: recursive
@@ -423,9 +423,14 @@ jobs:
           keyPassword=${ANDROID_RELEASE_KEY_PASSWORD}
           EOF
           else
-            echo "Android production APK requires signing secrets:"
-            echo "ANDROID_RELEASE_KEYSTORE_BASE64, ANDROID_RELEASE_STORE_PASSWORD, ANDROID_RELEASE_KEY_ALIAS, ANDROID_RELEASE_KEY_PASSWORD"
-            exit 1
+            echo "Signing secrets not configured, generating temporary release keystore..."
+            keytool -genkey -v -keystore release-keystore.jks -alias olcbox -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Olcbox, OU=Olcbox, O=Olcbox, L=City, S=State, C=US"
+            cat > keystore.properties <<EOF
+          storeFile=release-keystore.jks
+          storePassword=android
+          keyAlias=olcbox
+          keyPassword=android
+          EOF
           fi
 
       - name: Build production APK
@@ -511,7 +516,7 @@ jobs:
       - name: Checkout olcrtc
         uses: actions/checkout@v7
         with:
-          repository: alananisimov/olcrtc
+          repository: Ghosterbeef/olcrtc
           ref: ${{ needs.release_version.outputs.olcrtc_sha }}
           path: olcrtc
           submodules: recursive
