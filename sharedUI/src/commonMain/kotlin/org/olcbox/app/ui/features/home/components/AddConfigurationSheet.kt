@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.olcbox.app.ui.localization.LocalAppStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +51,7 @@ fun AddConfigurationSheet(
     onUpdateSubscriptionsClick: () -> Unit,
     onAddCustomLocationClick: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -64,8 +66,8 @@ fun AddConfigurationSheet(
                 .padding(bottom = 32.dp)
         ) {
             AddSheetHeader(
-                title = "Add connection",
-                subtitle = "Subscription or custom location"
+                title = strings.addConnection,
+                subtitle = strings.addConnectionSubtitle
             )
 
             Spacer(Modifier.height(20.dp))
@@ -73,31 +75,31 @@ fun AddConfigurationSheet(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (canScanQr) {
                     AddSheetAction(
-                        title = "Scan QR code",
-                        value = "Subscription or olcrtc URI",
+                        title = strings.scanQrCode,
+                        value = strings.scanQrCodeSubtitle,
                         icon = Icons.Outlined.QrCodeScanner,
                         onClick = onScanQrClick
                     )
                 }
 
                 AddSheetAction(
-                    title = "Enter link or URI",
-                    value = "Type, edit, or import from clipboard",
+                    title = strings.enterLinkOrUri,
+                    value = strings.enterLinkOrUriSubtitle,
                     icon = Icons.AutoMirrored.Outlined.Input,
                     onClick = onPasteLinkClick
                 )
 
                 AddSheetAction(
-                    title = "Import from file",
-                    value = "Read subscription or config file",
+                    title = strings.importFromFile,
+                    value = strings.importFromFileSubtitle,
                     icon = Icons.Outlined.FileOpen,
                     onClick = onImportFileClick
                 )
 
                 if (hasSubscriptions) {
                     AddSheetAction(
-                        title = "Update subscriptions",
-                        value = "Refresh imported subscription locations",
+                        title = strings.updateSubscriptions,
+                        value = strings.updateSubscriptionsSubtitle,
                         icon = Icons.Outlined.Refresh,
                         showChevron = false,
                         onClick = onUpdateSubscriptionsClick
@@ -105,8 +107,8 @@ fun AddConfigurationSheet(
                 }
 
                 AddSheetAction(
-                    title = "Create custom location",
-                        value = "Enter room, key, provider, and transport",
+                    title = strings.createCustomLocation,
+                    value = strings.createCustomLocationSubtitle,
                     icon = Icons.Outlined.Add,
                     onClick = onAddCustomLocationClick
                 )

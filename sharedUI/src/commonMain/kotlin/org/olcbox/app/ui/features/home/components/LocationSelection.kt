@@ -33,11 +33,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.olcbox.app.data.model.parseTrafficQuota
+import org.olcbox.app.ui.components.TrafficQuotaIndicator
 import org.olcbox.app.ui.features.locations.LocationItem
 import org.olcbox.app.ui.features.locations.PingsState
 import org.olcbox.app.ui.features.locations.components.LocationRow
 import org.olcbox.app.ui.features.locations.components.RefreshButton
-import org.olcbox.app.ui.components.TrafficQuotaIndicator
+import org.olcbox.app.ui.localization.AppStrings
+import org.olcbox.app.ui.localization.LocalAppStrings
 
 @Composable
 fun LocationSelectorScreen(
@@ -53,6 +55,8 @@ fun LocationSelectorScreen(
     onLocationSelected: (String) -> Unit,
     onLocationSettingsClick: (String) -> Unit
 ) {
+    val strings = LocalAppStrings.current
+
     Column(modifier = modifier.fillMaxWidth()) {
         val subscriptionLocations = locations.filter { !it.subscriptionUrl.isNullOrBlank() }
         val subscriptionGroups = subscriptionLocations
@@ -63,6 +67,7 @@ fun LocationSelectorScreen(
 
         if (locations.isEmpty()) {
             RelaySetupCard(
+                strings = strings,
                 onAddSubscriptionClick = onAddSubscriptionClick,
                 onAddLocationClick = onAddLocationClick
             )
@@ -81,6 +86,7 @@ fun LocationSelectorScreen(
                     ) {
                         SubscriptionGroupHeader(
                             locations = group,
+                            strings = strings,
                             modifier = Modifier.weight(1f)
                         )
 
@@ -93,7 +99,7 @@ fun LocationSelectorScreen(
                                 isRefreshing = isGroupRefreshing,
                                 onClick = { onRefreshClick(groupIds) },
                                 tint = MaterialTheme.colorScheme.primary,
-                                label = "Ping",
+                                label = strings.pingButtonLabel,
                                 icon = Icons.Outlined.Bolt,
                                 enabled = updatingSubscriptionUrl == null
                             )
@@ -107,7 +113,7 @@ fun LocationSelectorScreen(
                                         isRefreshing = updatingSubscriptionUrl == subscriptionUrl,
                                         onClick = { onSubscriptionUpdateClick(subscriptionUrl) },
                                         tint = MaterialTheme.colorScheme.primary,
-                                        label = "Update",
+                                        label = strings.updateButtonLabel,
                                         icon = Icons.Outlined.Refresh,
                                         enabled = updatingSubscriptionUrl == null && !isGroupRefreshing
                                     )
@@ -148,11 +154,10 @@ fun LocationSelectorScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         LocationGroupHeader(
-                            title = "Custom locations",
+                            title = strings.customLocations,
                             modifier = Modifier.weight(1f)
                         )
 
-                        // 2. Вычисляем состояние загрузки только для кастомных локаций
                         val customIds = customLocations.map { it.storageId }
                         val isCustomRefreshing = pingsState is PingsState.Loading &&
                                 pingsState.pendingLocationIds.any { it in customIds }
@@ -161,7 +166,7 @@ fun LocationSelectorScreen(
                             isRefreshing = isCustomRefreshing,
                             onClick = { onRefreshClick(customIds) },
                             tint = MaterialTheme.colorScheme.primary,
-                            label = "Ping",
+                            label = strings.pingButtonLabel,
                             icon = Icons.Outlined.Bolt
                         )
                     }
@@ -192,7 +197,7 @@ fun LocationSelectorScreen(
                 Icon(Icons.Rounded.Add, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Add custom location",
+                    text = strings.addCustomLocation,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -209,7 +214,7 @@ fun LocationSelectorScreen(
                     Icon(Icons.Rounded.Add, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "Add subscription",
+                        text = strings.addSubscription,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -221,6 +226,7 @@ fun LocationSelectorScreen(
 
 @Composable
 private fun RelaySetupCard(
+    strings: AppStrings,
     onAddSubscriptionClick: () -> Unit,
     onAddLocationClick: () -> Unit
 ) {
@@ -229,7 +235,7 @@ private fun RelaySetupCard(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text(
-            text = "Add relay setup",
+            text = strings.addRelaySetup,
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
@@ -237,16 +243,16 @@ private fun RelaySetupCard(
         )
 
         SetupActionRow(
-            title = "Add subscription",
-            subtitle = "Scan QR, paste URI, or import file",
+            title = strings.addSubscription,
+            subtitle = strings.addRelaySetupSubtitle,
             icon = Icons.Outlined.QrCodeScanner,
             prominent = true,
             onClick = onAddSubscriptionClick
         )
 
         SetupActionRow(
-            title = "Create custom location",
-            subtitle = "Enter room, key, provider, and transport",
+            title = strings.createCustomLocation,
+            subtitle = strings.createCustomLocationSubtitle,
             icon = Icons.Outlined.Add,
             onClick = onAddLocationClick
         )
@@ -351,12 +357,13 @@ private fun LocationGroupHeader(
 @Composable
 private fun SubscriptionGroupHeader(
     locations: List<LocationItem>,
+    strings: AppStrings,
     modifier: Modifier = Modifier
 ) {
     val first = locations.firstOrNull()
-    val title = first?.subscriptionTitle().orEmpty().ifBlank { "Subscriptions" }
+    val title = first?.subscriptionTitle(strings).orEmpty().ifBlank { strings.subscriptions }
     val description = first?.subscriptionDescription()
-    val details = first?.subscriptionDetails()
+    val details = first?.subscriptionDetails(strings)
 
     Column(modifier = modifier.padding(start = 4.dp, top = 2.dp)) {
         Text(
@@ -465,22 +472,22 @@ private fun LocationItem.subscriptionGroupKey(): String {
     ).joinToString("|").ifBlank { storageId }
 }
 
-private fun LocationItem.subscriptionTitle(): String {
+private fun LocationItem.subscriptionTitle(strings: AppStrings): String {
     val subscription = metadata?.subscription
 
     return listOfNotNull(
         subscription?.icon?.takeIf { it.isNotBlank() },
-        subscription?.name?.takeIf { it.isNotBlank() } ?: "Subscriptions"
+        subscription?.name?.takeIf { it.isNotBlank() } ?: strings.subscriptions
     ).joinToString(" ")
 }
 
-private fun LocationItem.subscriptionDetails(): String? {
+private fun LocationItem.subscriptionDetails(strings: AppStrings): String? {
     val subscription = metadata?.subscription ?: return null
     val hasProgressQuota = parseTrafficQuota(subscription.used, subscription.available) != null
 
     return listOfNotNull(
-        quotaText(subscription.used, subscription.available).takeUnless { hasProgressQuota },
-        subscription.refresh?.takeIf { it.isNotBlank() }?.let { "Refresh $it" }
+        quotaText(subscription.used, subscription.available, strings).takeUnless { hasProgressQuota },
+        subscription.refresh?.takeIf { it.isNotBlank() }?.let { "${strings.updateButtonLabel} $it" }
     ).joinToString(" · ").takeIf { it.isNotBlank() }
 }
 
@@ -489,19 +496,11 @@ private fun LocationItem.subscriptionDescription(): String? {
     return subscription.displayDescription()
 }
 
-private fun quotaText(used: String?, available: String?): String? {
+private fun quotaText(used: String?, available: String?, strings: AppStrings): String? {
     return when {
-        !used.isNullOrBlank() && !available.isNullOrBlank() -> "$used used · $available available"
-        !used.isNullOrBlank() -> "$used used"
-        !available.isNullOrBlank() -> "$available available"
+        !used.isNullOrBlank() && !available.isNullOrBlank() -> strings.trafficQuota(used, available)
+        !used.isNullOrBlank() -> "$used ${strings.used}"
+        !available.isNullOrBlank() -> "$available ${strings.remaining}"
         else -> null
     }
 }
-
-private fun plural(value: Long, unit: String): String {
-    return "$value $unit${if (value == 1L) "" else "s"}"
-}
-
-private const val MINUTE_MILLIS = 60_000L
-private const val HOUR_MILLIS = 60 * MINUTE_MILLIS
-private const val DAY_MILLIS = 24 * HOUR_MILLIS

@@ -14,15 +14,15 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import kotlinx.coroutines.withTimeoutOrNull
+import org.olcbox.app.data.LocationsRepository
 import org.olcbox.app.data.model.LocationConfig
 import org.olcbox.app.data.model.LocationMetadata
-import org.olcbox.app.data.repository.LocationsRepository
+import org.olcbox.app.ui.localization.AppLocalization
 
 data class LocationItem(
     val storageId: String,
     val fullName: String,
-    val config: LocationConfig? = null,
+    val config: LocationConfig?,
     val subscriptionUrl: String? = null,
     val metadata: LocationMetadata? = null
 )
@@ -31,16 +31,12 @@ sealed class PingsState {
     object Idle : PingsState()
 
     data class Loading(
-        val lastPings: Map<String, Int?>? = null,
+        val pendingLocationIds: Set<String>,
         val currentPings: Map<String, Int?> = emptyMap(),
-        val pendingLocationIds: Set<String> = emptySet(),
-        val completed: Int = 0,
-        val total: Int = 0
+        val lastPings: Map<String, Int?>? = null
     ) : PingsState()
 
-    data class Success(
-        val pings: Map<String, Int?>
-    ) : PingsState()
+    data class Success(val pings: Map<String, Int?>) : PingsState()
 
     data class Error(
         val message: String,
@@ -49,8 +45,10 @@ sealed class PingsState {
 }
 
 class LocationViewModel(
-    private val locationsRepository: LocationsRepository,
+    private val locationsRepository: LocationsRepository
 ) : ViewModel() {
+
+    private val pingSemaphore = Semaphore(5)
 
     var locations = mutableStateListOf<LocationItem>()
         private set
@@ -62,16 +60,22 @@ class LocationViewModel(
         private set
 
     private val activePingJobs = mutableMapOf<String, Job>()
-    private val pingSemaphore = Semaphore(LOCATION_PING_PARALLELISM)
+    private var loadLocationsRequest = 0L
     private var loadLocationsJob: Job? = null
-    private var loadLocationsRequest = 0
-    private val providerDrafts = mutableMapOf<String, ProviderDraft>()
+
+    var editingId by mutableStateOf<String?>(null)
+        private set
 
     var editingConfig by mutableStateOf(LocationConfig())
+        private set
+
     var editingName by mutableStateOf("")
-    var editingId by mutableStateOf<String?>(null)
+        private set
+
     var editingServiceProvider by mutableStateOf(LocationConfig.DEFAULT_BYPASS_PROVIDER)
         private set
+
+    private val providerDrafts = mutableMapOf<String, ProviderDraft>()
 
     var isSaving by mutableStateOf(false)
         private set
@@ -139,28 +143,39 @@ class LocationViewModel(
                                 nextLocations.none { it.storageId == currentSelectedId }
                         )
             ) {
-                nextLocations.firstOrNull()?.storageId
+                nextLocations.first().storageId
             } else {
                 currentSelectedId
             }
-            if (
-                nextSelectedId != currentSelectedId &&
-                nextLocations.any { it.storageId == nextSelectedId }
-            ) {
-                locationsRepository.setActiveLocationId(nextSelectedId)
+
+            if (selectedLocationId != nextSelectedId) {
+                selectedLocationId = nextSelectedId
+                if (nextSelectedId != null) {
+                    locationsRepository.setActiveLocationId(nextSelectedId)
+                }
             }
 
-            if (requestId != loadLocationsRequest) return@launch
+            val validIds = nextLocations.map { it.storageId }.toSet()
+            activePingJobs.keys.retainAll(validIds)
 
-            selectedLocationId = nextSelectedId
-            onComplete()
-        }
-    }
+            when (val current = pingsState) {
+                is PingsState.Success -> {
+                    pingsState = PingsState.Success(
+                        current.pings.filterKeys { it in validIds }
+                    )
+                }
 
-    fun selectLocation(id: String, onComplete: () -> Unit = {}) {
-        viewModelScope.launch {
-            locationsRepository.setActiveLocationId(id)
-            selectedLocationId = id
+                is PingsState.Loading -> {
+                    pingsState = current.copy(
+                        pendingLocationIds = current.pendingLocationIds.intersect(validIds),
+                        currentPings = current.currentPings.filterKeys { it in validIds },
+                        lastPings = current.lastPings?.filterKeys { it in validIds }
+                    )
+                }
+
+                else -> Unit
+            }
+
             onComplete()
         }
     }
@@ -253,41 +268,16 @@ class LocationViewModel(
         jobsToStart.forEach { it.start() }
     }
 
-    private fun currentPingsSnapshot(): Map<String, Int?> {
-        return when (val state = pingsState) {
-            PingsState.Idle -> emptyMap()
-
-            is PingsState.Loading -> {
-                state.currentPings.ifEmpty {
-                    state.lastPings.orEmpty()
-                }
-            }
-
-            is PingsState.Success -> {
-                state.pings
-            }
-
-            is PingsState.Error -> {
-                state.lastPings.orEmpty()
-            }
-        }
-    }
-
-    private fun emitPingState(
-        pings: Map<String, Int?> = currentPingsSnapshot()
-    ) {
+    private fun emitPingState(basePings: Map<String, Int?> = currentPingsSnapshot()) {
         val pendingIds = activePingJobs.keys.toSet()
-
-        pingsState = if (pendingIds.isEmpty()) {
-            PingsState.Success(pings)
-        } else {
+        pingsState = if (pendingIds.isNotEmpty()) {
             PingsState.Loading(
-                lastPings = pings,
-                currentPings = pings,
                 pendingLocationIds = pendingIds,
-                completed = 0,
-                total = pendingIds.size
+                currentPings = basePings,
+                lastPings = basePings
             )
+        } else {
+            PingsState.Success(basePings)
         }
     }
 
@@ -295,48 +285,47 @@ class LocationViewModel(
         location: LocationItem,
         performPing: suspend (LocationConfig) -> Long?
     ): Long? {
-        val config = location.config?.takeIf { it.isComplete() } ?: return null
+        val config = location.config ?: return null
+        return performPing(config)
+    }
 
-        return withTimeoutOrNull(LOCATION_PING_TIMEOUT_MS) {
-            repeat(LOCATION_PING_ATTEMPTS) { attempt ->
-                val result = try {
-                    performPing(config)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    null
-                }
+    private fun currentPingsSnapshot(): Map<String, Int?> {
+        return when (val state = pingsState) {
+            is PingsState.Success -> state.pings
+            is PingsState.Loading -> state.currentPings
+            is PingsState.Error -> state.lastPings ?: emptyMap()
+            PingsState.Idle -> emptyMap()
+        }
+    }
 
-                if (result != null) {
-                    return@withTimeoutOrNull result
-                }
-
-                if (attempt < LOCATION_PING_ATTEMPTS - 1) {
-                    delay(LOCATION_PING_RETRY_DELAY_MS)
-                }
-            }
-
-            null
+    fun selectLocation(id: String, onSelected: () -> Unit = {}) {
+        if (selectedLocationId == id) return
+        selectedLocationId = id
+        viewModelScope.launch {
+            locationsRepository.setActiveLocationId(id)
+            onSelected()
         }
     }
 
     fun startEditing(id: String?) {
-        nameError = null
-        serverError = null
-        keyError = null
-        dnsError = null
-        isSaving = false
+        editingId = id
         providerDrafts.clear()
 
         if (id == null) {
-            editingId = null
             editingConfig = LocationConfig()
             editingName = ""
+            nameError = null
+            serverError = null
+            keyError = null
+            dnsError = null
         } else {
-            val location = locations.find { it.storageId == id }
-            editingId = id
-            editingConfig = location?.config?.normalized() ?: LocationConfig()
-            editingName = editingConfig.displayName()
+            val item = locations.find { it.storageId == id }
+            editingConfig = item?.config?.normalized() ?: LocationConfig()
+            editingName = editingConfig.name
+            validateName(editingName)
+            validateServer(editingConfig.id)
+            validateKey(editingConfig.key)
+            validateDnsServer(editingConfig.dnsServer)
         }
         val provider = LocationConfig.normalizeProvider(editingConfig.bypassProvider)
         editingServiceProvider = if (provider == LocationConfig.PROVIDER_JITSI) {
@@ -432,39 +421,43 @@ class LocationViewModel(
     }
 
     private fun validateName(name: String) {
+        val strings = AppLocalization.strings
         nameError = when {
-            name.isBlank() -> "Name cannot be empty"
-            name.length > 30 -> "Name is too long (max 30 chars)"
+            name.isBlank() -> strings.errorNameEmpty
+            name.length > 30 -> strings.errorNameTooLong
             else -> null
         }
     }
 
     private fun validateServer(server: String) {
+        val strings = AppLocalization.strings
         val roomLabel = if (editingConfig.bypassProvider == LocationConfig.PROVIDER_JITSI) {
-            "Room URL"
+            strings.roomUrlLabel
         } else {
-            "Room ID"
+            strings.roomIdLabel
         }
         serverError = when {
-            server.isBlank() -> "$roomLabel cannot be empty"
-            server.length > 256 -> "$roomLabel is too long"
+            server.isBlank() -> strings.errorRoomEmpty(roomLabel)
+            server.length > 256 -> strings.errorRoomTooLong(roomLabel)
             else -> null
         }
     }
 
     private fun validateKey(key: String) {
+        val strings = AppLocalization.strings
         keyError = when {
-            key.isBlank() -> "Key cannot be empty"
-            !key.matches(Regex("^[a-fA-F0-9]{64}$")) -> "Key must be 64 hex characters"
+            key.isBlank() -> strings.errorKeyEmpty
+            !key.matches(Regex("^[a-fA-F0-9]{64}$")) -> strings.errorKeyInvalid
             else -> null
         }
     }
 
     private fun validateDnsServer(dnsServer: String) {
+        val strings = AppLocalization.strings
         dnsError = if (LocationConfig.isValidDnsServer(dnsServer)) {
             null
         } else {
-            "Use host:port or [IPv6]:port; leave empty for Auto"
+            strings.errorDnsInvalid
         }
     }
 
@@ -488,7 +481,6 @@ class LocationViewModel(
                 loadLocations()
 
                 delay(600)
-
                 onComplete()
             } finally {
                 isSaving = false
@@ -496,23 +488,28 @@ class LocationViewModel(
         }
     }
 
-    fun deleteLocation(id: String, onComplete: () -> Unit = {}) {
+    fun deleteLocation(id: String, onComplete: () -> Unit) {
         viewModelScope.launch {
             locationsRepository.deleteLocation(id)
-            loadLocations(onComplete)
+            activePingJobs[id]?.cancel()
+            activePingJobs.remove(id)
+
+            val currentSelected = locationsRepository.getActiveLocationId()
+            if (currentSelected == id) {
+                val remaining = locationsRepository.getBundle().locations
+                val nextSelected = remaining.firstOrNull()?.storageId
+                if (nextSelected != null) {
+                    locationsRepository.setActiveLocationId(nextSelected)
+                }
+            }
+
+            loadLocations()
+            onComplete()
         }
     }
-
-    private companion object {
-        const val LOCATION_PING_ATTEMPTS = 1
-        const val LOCATION_PING_TIMEOUT_MS = 12_000L
-        const val LOCATION_PING_RETRY_DELAY_MS = 0L
-        // Finish each location check before starting the next one.
-        const val LOCATION_PING_PARALLELISM = 1
-    }
-
-    private data class ProviderDraft(
-        val room: String = "",
-        val key: String = ""
-    )
 }
+
+private data class ProviderDraft(
+    val room: String = "",
+    val key: String = ""
+)

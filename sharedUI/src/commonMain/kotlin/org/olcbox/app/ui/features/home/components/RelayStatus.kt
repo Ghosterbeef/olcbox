@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.olcbox.app.ui.localization.LocalAppStrings
 
 @Composable
 fun RelayStatus(
@@ -32,6 +33,8 @@ fun RelayStatus(
     requiresSetup: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
+
     val containerColor by animateColorAsState(
         targetValue = when {
             isActive -> MaterialTheme.colorScheme.primaryContainer
@@ -59,14 +62,14 @@ fun RelayStatus(
         else -> MaterialTheme.colorScheme.onSurface
     }
     val title = when {
-        isActive -> "Relay Active"
-        requiresSetup -> "Relay Inactive"
-        else -> "Relay Inactive"
+        isActive -> strings.relayActive
+        requiresSetup -> strings.relayInactive
+        else -> strings.relayInactive
     }
     val subtitle = when {
-        isActive -> "Connected"
-        requiresSetup -> "No location selected"
-        else -> "Disconnected"
+        isActive -> strings.statusConnected
+        requiresSetup -> strings.statusNoLocationSelected
+        else -> strings.statusDisconnected
     }
 
     Surface(
@@ -92,13 +95,13 @@ fun RelayStatus(
                         Icon(
                             tint = iconContentColor,
                             imageVector = Icons.Rounded.VerifiedUser,
-                            contentDescription = "Active"
+                            contentDescription = strings.activeDescription
                         )
                     } else {
                         Icon(
                             tint = iconContentColor,
                             imageVector = Icons.Outlined.Shield,
-                            contentDescription = "Inactive"
+                            contentDescription = strings.inactiveDescription
                         )
                     }
                 }

@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
+import org.olcbox.app.ui.localization.LocalAppStrings
 
 @Composable
 fun IosSocksOnboardingDialog(
@@ -16,15 +17,14 @@ fun IosSocksOnboardingDialog(
     onCopy: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Connect apps through Olcbox") },
+        title = { Text(strings.connectAppsThroughOlcbox) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "On iOS, Olcbox provides a local SOCKS5 proxy. Add these settings " +
-                        "to a SOCKS5-capable client such as Karing or Shadowrocket, then start Olcbox."
-                )
+                Text(strings.iosSocksDescription)
                 SelectionContainer {
                     Text(
                         text = socksSettingsText(settings),
@@ -35,12 +35,12 @@ fun IosSocksOnboardingDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Got it")
+                Text(strings.gotIt)
             }
         },
         dismissButton = {
             TextButton(onClick = onCopy) {
-                Text("Copy settings")
+                Text(strings.copySettings)
             }
         }
     )

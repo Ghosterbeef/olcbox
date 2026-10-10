@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.olcbox.app.ui.localization.LocalAppStrings
 import org.olcbox.app.update.AppUpdateInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,8 +34,9 @@ fun ApplicationUpdateOfferSheet(
     downloadProgress: Float?,
     onLater: () -> Unit,
     onDownload: () -> Unit,
-    downloadLabel: String = "Download"
+    downloadLabel: String? = null
 ) {
+    val strings = LocalAppStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -51,7 +53,7 @@ fun ApplicationUpdateOfferSheet(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Update available",
+                    text = strings.updateAvailable,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -79,7 +81,7 @@ fun ApplicationUpdateOfferSheet(
                         fontSize = 15.sp
                     )
                     Text(
-                        text = info.asset.sizeBytes?.formatBytes() ?: "Size unknown",
+                        text = info.asset.sizeBytes?.let { strings.formatBytes(it) } ?: strings.sizeUnknown,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp
                     )
@@ -99,25 +101,16 @@ fun ApplicationUpdateOfferSheet(
                     modifier = Modifier.weight(1f),
                     enabled = downloadProgress == null
                 ) {
-                    Text("Later")
+                    Text(strings.later)
                 }
                 Button(
                     onClick = onDownload,
                     modifier = Modifier.weight(1f),
                     enabled = downloadProgress == null
                 ) {
-                    Text(downloadLabel)
+                    Text(downloadLabel ?: strings.download)
                 }
             }
         }
-    }
-}
-
-private fun Long.formatBytes(): String {
-    val mb = this.toDouble() / (1024.0 * 1024.0)
-    return if (mb >= 1.0) {
-        "${(mb * 10).toInt() / 10.0} MB"
-    } else {
-        "${this / 1024L} KB"
     }
 }

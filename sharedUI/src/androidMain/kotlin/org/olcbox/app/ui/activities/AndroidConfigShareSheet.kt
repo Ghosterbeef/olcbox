@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
+import org.olcbox.app.ui.localization.LocalAppStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +50,7 @@ internal fun AndroidConfigShareSheet(
     payload: String,
     onDismiss: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val qrBitmap = remember(payload) { createQrBitmap(payload) }
@@ -108,13 +110,13 @@ internal fun AndroidConfigShareSheet(
                 OutlinedButton(
                     onClick = {
                         context.copySharePayload(payload)
-                        Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, strings.copied, Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Outlined.ContentCopy, contentDescription = null)
                     Spacer(Modifier.size(8.dp))
-                    Text("Copy")
+                    Text(strings.copy)
                 }
 
                 Button(
@@ -123,7 +125,7 @@ internal fun AndroidConfigShareSheet(
                 ) {
                     Icon(Icons.Outlined.Share, contentDescription = null)
                     Spacer(Modifier.size(8.dp))
-                    Text("Share")
+                    Text(strings.share)
                 }
             }
         }

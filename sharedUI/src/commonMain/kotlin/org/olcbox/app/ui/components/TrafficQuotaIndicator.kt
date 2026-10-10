@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -12,12 +13,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.olcbox.app.data.model.parseTrafficQuota
+import org.olcbox.app.ui.localization.LocalAppStrings
 
 @Composable
 fun TrafficQuotaIndicator(
@@ -26,6 +27,7 @@ fun TrafficQuotaIndicator(
     modifier: Modifier = Modifier,
     compact: Boolean = false
 ) {
+    val strings = LocalAppStrings.current
     val quota = remember(used, available) { parseTrafficQuota(used, available) } ?: return
 
     Column(
@@ -37,7 +39,7 @@ fun TrafficQuotaIndicator(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "${quota.availableLabel} remaining",
+                text = "${quota.availableLabel} ${strings.remaining}",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = if (compact) 11.sp else 12.sp,
                 maxLines = 1,
@@ -45,7 +47,7 @@ fun TrafficQuotaIndicator(
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = "${quota.usedLabel} used",
+                text = "${quota.usedLabel} ${strings.used}",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = if (compact) 11.sp else 12.sp,
                 maxLines = 1,

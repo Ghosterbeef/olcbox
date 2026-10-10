@@ -3,6 +3,8 @@ package org.olcbox.app.vpn
 import kotlinx.serialization.Serializable
 import org.olcbox.app.desktop.DesktopOs
 import org.olcbox.app.desktop.DesktopPaths
+import org.olcbox.app.ui.localization.AppLocalization
+import org.olcbox.app.ui.localization.AppStrings
 import org.olcbox.app.vpn.desktop.PacServer
 
 @Serializable
@@ -12,24 +14,24 @@ enum class DesktopRoutingMode {
     SystemProxy,
     LocalSocks;
 
-    fun displayName(): String = when (this) {
-        Auto -> "Auto"
-        Tun -> "TUN"
-        SystemProxy -> "System proxy"
-        LocalSocks -> "Local SOCKS only"
+    fun displayName(strings: AppStrings = AppLocalization.strings): String = when (this) {
+        Auto -> strings.auto
+        Tun -> strings.routingModeTun
+        SystemProxy -> strings.routingModeSystemProxy
+        LocalSocks -> strings.routingModeLocalSocks
     }
 
-    fun description(): String = when (this) {
-        Auto -> "Use the recommended mode for this operating system"
-        Tun -> "Route system traffic through a virtual network adapter"
-        SystemProxy -> "Configure the operating system proxy automatically"
-        LocalSocks -> "Expose SOCKS5 without changing system routing"
+    fun description(strings: AppStrings = AppLocalization.strings): String = when (this) {
+        Auto -> strings.routingModeAutoDesc
+        Tun -> strings.routingModeTunDesc
+        SystemProxy -> strings.routingModeSystemProxyDesc
+        LocalSocks -> strings.routingModeLocalSocksDesc
     }
 
-    fun effectiveDisplayName(): String = when (resolveForCurrentPlatform()) {
-        Tun -> "TUN"
-        SystemProxy -> "System proxy"
-        LocalSocks -> "Local SOCKS only"
+    fun effectiveDisplayName(strings: AppStrings = AppLocalization.strings): String = when (resolveForCurrentPlatform()) {
+        Tun -> strings.routingModeTun
+        SystemProxy -> strings.routingModeSystemProxy
+        LocalSocks -> strings.routingModeLocalSocks
         Auto -> error("Auto must resolve to a concrete desktop routing mode")
     }
 

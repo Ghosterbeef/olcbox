@@ -12,6 +12,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import org.olcbox.app.ui.localization.AppLocalization
+import org.olcbox.app.ui.localization.LocalAppLanguage
+import org.olcbox.app.ui.localization.LocalAppStrings
 
 @Composable
 actual fun AppTheme(
@@ -23,7 +26,9 @@ actual fun AppTheme(
     val typography = getAppTypography()
 
     CompositionLocalProvider(
-        LocalThemeIsDark provides isDarkState
+        LocalThemeIsDark provides isDarkState,
+        LocalAppLanguage provides AppLocalization.currentLanguage,
+        LocalAppStrings provides AppLocalization.strings
     ) {
         val isDark by isDarkState
         val colorScheme = when {

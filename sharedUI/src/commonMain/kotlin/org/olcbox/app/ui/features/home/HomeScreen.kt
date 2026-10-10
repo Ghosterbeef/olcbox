@@ -42,6 +42,7 @@ import org.olcbox.app.ui.features.home.components.LocationSelectorScreen
 import org.olcbox.app.ui.features.home.components.LogsSheet
 import org.olcbox.app.ui.features.home.components.RelayStatus
 import org.olcbox.app.ui.features.locations.LocationViewModel
+import org.olcbox.app.ui.localization.LocalAppStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,6 +64,7 @@ fun HomeScreen(
     onOpenLocationSettings: (String?) -> Unit,
     onAddLocation: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     var isLogsSheetOpen by remember { mutableStateOf(false) }
     var isAddSheetOpen by remember { mutableStateOf(false) }
     var isManualImportOpen by rememberSaveable { mutableStateOf(false) }
@@ -86,7 +88,7 @@ fun HomeScreen(
             isManualImportOpen = true
         } else {
             scope.launch {
-                snackbarHostState.showSnackbar("Invalid import link. Expected olcbox://add?url=<encoded HTTP(S) URL>")
+                snackbarHostState.showSnackbar(strings.invalidImportLink)
             }
         }
         viewModel.importLinks.consume(request)
@@ -102,9 +104,9 @@ fun HomeScreen(
     }
 
     val primaryActionLabel = when {
-        requiresSetup -> "SETUP"
-        state.isVpnLoading || state.isVpnConnected -> "STOP"
-        else -> "START"
+        requiresSetup -> strings.setup
+        state.isVpnLoading || state.isVpnConnected -> strings.stop
+        else -> strings.start
     }
 
     fun refreshSubscriptions() {
@@ -113,9 +115,9 @@ fun HomeScreen(
                 viewModel.restartVpnIfRunning()
 
                 val message = if (updatedCount > 0) {
-                    "Subscriptions updated: $updatedCount"
+                    strings.subscriptionsUpdatedCount(updatedCount)
                 } else {
-                    "No subscriptions to update"
+                    strings.noSubscriptionsToUpdate
                 }
 
                 scope.launch {
@@ -146,9 +148,9 @@ fun HomeScreen(
                     scope.launch {
                         snackbarHostState.showSnackbar(
                             if (updatedCount > 0) {
-                                "Subscription updated"
+                                strings.subscriptionUpdated
                             } else {
-                                "Subscription is already up to date"
+                                strings.subscriptionAlreadyUpToDate
                             }
                         )
                     }
@@ -157,7 +159,7 @@ fun HomeScreen(
             onError = { message ->
                 updatingSubscriptionUrl = null
                 scope.launch {
-                    snackbarHostState.showSnackbar("Could not update subscription: $message")
+                    snackbarHostState.showSnackbar(strings.couldNotUpdateSubscription(message))
                 }
             }
         )
@@ -325,13 +327,13 @@ fun HomeScreen(
                     manualSubscriptionRefresh = ""
                     manualSubscriptionAllowInsecure = false
                 },
-                title = { Text("Import link or URI") },
+                title = { Text(strings.importLinkOrUriTitle) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(
                             value = manualImportText,
                             onValueChange = { manualImportText = it },
-                            label = { Text("HTTP, HTTPS, or olcrtc URI") },
+                            label = { Text(strings.httpHttpsOlcrtcUriLabel) },
                             placeholder = { Text("https://example.org/subscription") },
                             minLines = 3,
                             maxLines = 6,
@@ -346,14 +348,14 @@ fun HomeScreen(
                                         .filter { it.isDigit() || it in "smhd" }
                                         .take(8)
                                 },
-                                label = { Text("Subscription refresh rate") },
-                                placeholder = { Text("Auto") },
+                                label = { Text(strings.subscriptionRefreshRateLabel) },
+                                placeholder = { Text(strings.auto) },
                                 supportingText = {
                                     Text(
                                         if (subscriptionRefreshError) {
-                                            "Use 5m–30d, for example 10m, 6h, or 1d"
+                                            strings.subscriptionRefreshRateError
                                         } else {
-                                            "Optional. Empty implies default."
+                                            strings.subscriptionRefreshRateHint
                                         }
                                     )
                                 },
@@ -369,7 +371,7 @@ fun HomeScreen(
                                     checked = manualSubscriptionAllowInsecure,
                                     onCheckedChange = { manualSubscriptionAllowInsecure = it }
                                 )
-                                Text("Allow insecure requests")
+                                Text(strings.allowInsecureRequests)
                             }
                         }
                     }
@@ -391,7 +393,7 @@ fun HomeScreen(
                                         viewModel.loadCurrentConfig()
                                     }
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("Configuration imported")
+                                        snackbarHostState.showSnackbar(strings.configImported)
                                     }
                                 },
                                 onError = { message ->
@@ -402,7 +404,7 @@ fun HomeScreen(
                             )
                         }
                     ) {
-                        Text("Import")
+                        Text(strings.importAction)
                     }
                 },
                 dismissButton = {
@@ -420,7 +422,7 @@ fun HomeScreen(
                             )
                         }
                     ) {
-                        Text("Paste clipboard")
+                        Text(strings.pasteClipboard)
                     }
                 }
             )

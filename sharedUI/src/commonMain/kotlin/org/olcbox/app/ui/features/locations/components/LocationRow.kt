@@ -48,6 +48,8 @@ import org.olcbox.app.data.model.LocationConfig
 import org.olcbox.app.data.model.parseTrafficQuota
 import org.olcbox.app.ui.components.TrafficQuotaIndicator
 import org.olcbox.app.ui.features.locations.LocationItem
+import org.olcbox.app.ui.localization.AppStrings
+import org.olcbox.app.ui.localization.LocalAppStrings
 import org.olcbox.app.util.parseEmojiAndName
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -62,6 +64,8 @@ fun LocationRow(
     onSettingsClick: () -> Unit = {},
     onClick: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
+
     val bgColor by animateColorAsState(
         targetValue = if (isSelected) {
             MaterialTheme.colorScheme.surfaceContainerHigh
@@ -132,7 +136,7 @@ fun LocationRow(
             }
 
             Text(
-                text = locationSubtitle(location),
+                text = locationSubtitle(location, strings),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 maxLines = 1,
@@ -146,7 +150,7 @@ fun LocationRow(
                 compact = true
             )
         }
-        
+
         when {
             isLoading -> {
                 ShimmeringPingSkeleton()
@@ -163,7 +167,7 @@ fun LocationRow(
 
             isError -> {
                 Text(
-                    text = "Offline",
+                    text = strings.offline,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.error
@@ -180,7 +184,7 @@ fun LocationRow(
             ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Settings",
+                    contentDescription = strings.settings,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -188,11 +192,11 @@ fun LocationRow(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        LocationSelectionIndicator(isSelected = isSelected)
+        LocationSelectionIndicator(isSelected = isSelected, strings = strings)
     }
 }
 
-private fun locationSubtitle(location: LocationItem): String {
+private fun locationSubtitle(location: LocationItem, strings: AppStrings): String {
     val config = location.config
     val metadata = location.metadata
     val providerName = config?.providerName()
@@ -204,26 +208,26 @@ private fun locationSubtitle(location: LocationItem): String {
         providerName,
         transportName,
         metadata?.ip?.takeIf { it.isNotBlank() }?.let { "IP $it" },
-        quotaText(metadata?.used, metadata?.available)
+        quotaText(metadata?.used, metadata?.available, strings)
             .takeUnless { parseTrafficQuota(metadata?.used, metadata?.available) != null }
     ).joinToString(" · ")
 }
 
-private fun quotaText(used: String?, available: String?): String? {
+private fun quotaText(used: String?, available: String?, strings: AppStrings): String? {
     return when {
-        !used.isNullOrBlank() && !available.isNullOrBlank() -> "$used used · $available available"
-        !used.isNullOrBlank() -> "$used used"
-        !available.isNullOrBlank() -> "$available available"
+        !used.isNullOrBlank() && !available.isNullOrBlank() -> strings.trafficQuota(used, available)
+        !used.isNullOrBlank() -> "$used ${strings.used}"
+        !available.isNullOrBlank() -> "$available ${strings.remaining}"
         else -> null
     }
 }
 
 @Composable
-private fun LocationSelectionIndicator(isSelected: Boolean) {
+private fun LocationSelectionIndicator(isSelected: Boolean, strings: AppStrings) {
     if (isSelected) {
         Icon(
             imageVector = Icons.Rounded.CheckCircle,
-            contentDescription = "Selected location",
+            contentDescription = strings.selectedLocationDescription,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(24.dp)
         )

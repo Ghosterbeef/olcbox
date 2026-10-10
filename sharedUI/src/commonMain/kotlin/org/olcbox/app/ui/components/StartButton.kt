@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.olcbox.app.ui.localization.LocalAppStrings
 
 sealed class StartButtonState {
     object Idle : StartButtonState()
@@ -42,6 +43,8 @@ fun StartButton(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
+
     val mainButtonColor by animateColorAsState(
         targetValue = when {
             isActive -> MaterialTheme.colorScheme.primary
@@ -92,7 +95,7 @@ fun StartButton(
         ) {
             Icon(
                 imageVector = Icons.Rounded.PowerSettingsNew,
-                contentDescription = "Start Icon",
+                contentDescription = strings.startIconDescription,
                 tint = contentColor.copy(alpha = if (isLoading || !enabled) 0.5f else 1f),
                 modifier = Modifier.size(48.dp)
             )
@@ -101,10 +104,10 @@ fun StartButton(
 
             Text(
                 text = label ?: when {
-                    isLoading -> "STOP"
-                    isActive -> "STOP"
-                    requiresSetup -> "SETUP"
-                    else -> "START"
+                    isLoading -> strings.stop
+                    isActive -> strings.stop
+                    requiresSetup -> strings.setup
+                    else -> strings.start
                 },
                 color = contentColor.copy(alpha = if (!enabled) 0.7f else 1f),
                 fontSize = 22.sp,

@@ -35,6 +35,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import org.olcbox.app.data.model.LocationConfig
 import org.olcbox.app.ui.features.home.HomeScreenViewModel
+import org.olcbox.app.ui.localization.LocalAppStrings
 
 sealed class PingState {
     object Idle : PingState()
@@ -49,13 +50,14 @@ fun PingButton(
     homeViewModel: HomeScreenViewModel,
     configGetter: () -> LocationConfig? = { null }
 ) {
+    val strings = LocalAppStrings.current
     var pingState by remember { mutableStateOf<PingState>(PingState.Idle) }
 
     val descriptionText = when (pingState) {
-        is PingState.Error -> "Offline"
-        is PingState.Loading -> "Checking..."
-        is PingState.Success -> "Connected ${(pingState as PingState.Success).latency}ms"
-        else -> "Click To Verify Reachability"
+        is PingState.Error -> strings.offline
+        is PingState.Loading -> strings.checking
+        is PingState.Success -> strings.connectedLatency((pingState as PingState.Success).latency)
+        else -> strings.clickToVerifyReachability
     }
 
     val stateIcon: @Composable () -> Unit = {
@@ -107,7 +109,7 @@ fun PingButton(
                     pingState = if (result != null) {
                         PingState.Success(result)
                     } else {
-                        PingState.Error("Offline")
+                        PingState.Error(strings.offline)
                     }
                 }
             }
@@ -133,7 +135,7 @@ fun PingButton(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Connectivity Check",
+                    text = strings.connectivityCheck,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface

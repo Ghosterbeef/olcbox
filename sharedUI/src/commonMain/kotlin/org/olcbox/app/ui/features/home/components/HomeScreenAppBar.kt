@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import org.olcbox.app.ui.localization.LocalAppStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,16 +26,18 @@ fun HomeScreenAppBar(
     onSplitTunnelingClick: () -> Unit = {},
     onAddClick: () -> Unit = {}
 ) {
+    val strings = LocalAppStrings.current
+
     CenterAlignedTopAppBar(
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "olcbox",
+                    text = strings.appName,
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "multiplatform olcrtc configurator",
+                    text = strings.appSubtitle,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -45,7 +48,7 @@ fun HomeScreenAppBar(
                 IconButton(onClick = onAppSettingsClick) {
                     Icon(
                         imageVector = Icons.Outlined.Settings,
-                        contentDescription = "Application settings",
+                        contentDescription = strings.appSettingsContentDescription,
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -53,7 +56,7 @@ fun HomeScreenAppBar(
                 IconButton(onClick = onHistoryClick) {
                     Icon(
                         imageVector = Icons.Outlined.History,
-                        contentDescription = "History",
+                        contentDescription = strings.historyContentDescription,
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -64,7 +67,7 @@ fun HomeScreenAppBar(
                 IconButton(onClick = onSplitTunnelingClick) {
                     Icon(
                         imageVector = Icons.Outlined.Shield,
-                        contentDescription = "Split tunneling",
+                        contentDescription = strings.splitTunnelingContentDescription,
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -72,7 +75,7 @@ fun HomeScreenAppBar(
             IconButton(onClick = onAddClick) {
                 Icon(
                     imageVector = Icons.Outlined.Add,
-                    contentDescription = "Add configuration",
+                    contentDescription = strings.addConfigurationContentDescription,
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }

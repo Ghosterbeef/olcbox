@@ -69,6 +69,8 @@ import androidx.compose.foundation.layout.ime
 import org.olcbox.app.data.model.LocationConfig
 import org.olcbox.app.ui.components.PingButton
 import org.olcbox.app.ui.features.home.HomeScreenViewModel
+import org.olcbox.app.ui.localization.AppStrings
+import org.olcbox.app.ui.localization.LocalAppStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,13 +79,15 @@ fun LocationSettingsTopBar(
     onBack: () -> Unit,
     onShare: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
+
     TopAppBar(
-        title = { Text("Location settings") },
+        title = { Text(strings.locationSettingsTitle) },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back"
+                    contentDescription = strings.back
                 )
             }
         },
@@ -98,7 +102,7 @@ fun LocationSettingsTopBar(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Share,
-                    contentDescription = "Share location"
+                    contentDescription = strings.shareLocationContentDescription
                 )
             }
         }
@@ -113,6 +117,7 @@ fun LocationSettingsScreen(
     onShareLocationRequested: (LocationConfig) -> Unit = {},
     onBack: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val config = viewModel.editingConfig
     val name = viewModel.editingName
     val isSaving = viewModel.isSaving
@@ -144,6 +149,7 @@ fun LocationSettingsScreen(
                         showDelete = viewModel.editingId != null,
                         isSaving = isSaving,
                         isFormValid = viewModel.isFormValid,
+                        strings = strings,
                         onDelete = {
                             viewModel.editingId?.let { id ->
                                 viewModel.deleteLocation(id) { onBack() }
@@ -161,7 +167,6 @@ fun LocationSettingsScreen(
             }
         }
     ) { innerPadding ->
-        // Keep focused fields composed while the IME or paste toolbar changes the viewport.
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -174,12 +179,13 @@ fun LocationSettingsScreen(
             SettingsTextField(
                 value = name,
                 onValueChange = viewModel::onNameChanged,
-                label = "Name",
-                placeholder = "Location name",
+                label = strings.nameLabel,
+                placeholder = strings.locationNamePlaceholder,
                 enabled = !isSaving,
                 isError = viewModel.nameError != null,
                 supportingText = viewModel.nameError,
                 leadingIcon = Icons.Rounded.Public,
+                clearContentDescription = strings.clear,
                 onClear = { viewModel.onNameChanged("") },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
             )
@@ -188,6 +194,7 @@ fun LocationSettingsScreen(
                 selectedProvider = config.bypassProvider,
                 serviceProvider = viewModel.editingServiceProvider,
                 enabled = !isSaving,
+                strings = strings,
                 onProviderSelected = viewModel::onBypassProviderChanged
             )
 
@@ -195,6 +202,7 @@ fun LocationSettingsScreen(
                 ProviderPicker(
                     selectedProvider = config.bypassProvider,
                     enabled = !isSaving,
+                    strings = strings,
                     onProviderSelected = viewModel::onBypassProviderChanged
                 )
             }
@@ -204,6 +212,7 @@ fun LocationSettingsScreen(
                     selectedProvider = config.bypassProvider,
                     selectedTransport = config.transport,
                     enabled = !isSaving,
+                    strings = strings,
                     onTransportSelected = viewModel::onTransportChanged
                 )
             }
@@ -215,6 +224,7 @@ fun LocationSettingsScreen(
                     tracks = config.vp8Tracks,
                     onTracksChanged = viewModel::onVp8TracksChanged,
                     enabled = !isSaving,
+                    strings = strings,
                     onFpsChanged = viewModel::onVp8FpsChanged,
                     onBatchChanged = viewModel::onVp8BatchChanged
                 )
@@ -223,12 +233,13 @@ fun LocationSettingsScreen(
             SettingsTextField(
                 value = config.id,
                 onValueChange = viewModel::onServerChanged,
-                label = roomIdLabel(config.bypassProvider),
+                label = roomIdLabel(config.bypassProvider, strings),
                 placeholder = roomIdPlaceholder(config.bypassProvider),
                 enabled = !isSaving,
                 isError = viewModel.serverError != null,
                 supportingText = viewModel.serverError,
                 leadingIcon = Icons.Rounded.MeetingRoom,
+                clearContentDescription = strings.clear,
                 onClear = { viewModel.onServerChanged("") },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = roomKeyboardType(config.bypassProvider),
@@ -239,12 +250,13 @@ fun LocationSettingsScreen(
             SettingsTextField(
                 value = config.key,
                 onValueChange = viewModel::onPasswordChanged,
-                label = "Encryption key",
-                placeholder = "64 hex characters",
+                label = strings.encryptionKeyLabel,
+                placeholder = strings.encryptionKeyPlaceholder,
                 enabled = !isSaving,
                 isError = viewModel.keyError != null,
                 supportingText = viewModel.keyError,
                 leadingIcon = Icons.Rounded.Key,
+                clearContentDescription = strings.clear,
                 onClear = { viewModel.onPasswordChanged("") },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
@@ -253,12 +265,13 @@ fun LocationSettingsScreen(
             SettingsTextField(
                 value = config.dnsServer,
                 onValueChange = viewModel::onDnsServerChanged,
-                label = "DNS server (optional)",
-                placeholder = "Auto, or 1.1.1.1:53",
+                label = strings.dnsServerLabel,
+                placeholder = strings.dnsServerPlaceholder,
                 enabled = !isSaving,
                 isError = viewModel.dnsError != null,
                 supportingText = viewModel.dnsError,
                 leadingIcon = Icons.Rounded.Public,
+                clearContentDescription = strings.clear,
                 onClear = { viewModel.onDnsServerChanged("") },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Uri,
@@ -301,23 +314,27 @@ private fun ConnectionTypePicker(
     selectedProvider: String,
     serviceProvider: String,
     enabled: Boolean,
+    strings: AppStrings,
     onProviderSelected: (String) -> Unit
 ) {
     val normalizedProvider = LocationConfig.normalizeProvider(selectedProvider)
     val selectedIsJitsi = isJitsiProvider(normalizedProvider)
     val normalizedServiceProvider = LocationConfig.normalizeProvider(serviceProvider)
-    val options = listOf(ConnectionType.Service, ConnectionType.Jitsi)
+    val options = listOf(
+        Pair(ConnectionType.Service, strings.connectionTypeService),
+        Pair(ConnectionType.Jitsi, strings.connectionTypeJitsi)
+    )
 
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        SectionTitle(title = "Connection type")
+        SectionTitle(title = strings.connectionType)
 
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier.fillMaxWidth()
         ) {
-            options.forEachIndexed { index, type ->
+            options.forEachIndexed { index, (type, label) ->
                 val selected = when (type) {
                     ConnectionType.Service -> !selectedIsJitsi
                     ConnectionType.Jitsi -> selectedIsJitsi
@@ -339,7 +356,7 @@ private fun ConnectionTypePicker(
                     enabled = enabled,
                     label = {
                         Text(
-                            text = type.label,
+                            text = label,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -354,6 +371,7 @@ private fun ConnectionTypePicker(
 private fun ProviderPicker(
     selectedProvider: String,
     enabled: Boolean,
+    strings: AppStrings,
     onProviderSelected: (String) -> Unit
 ) {
     val selected = LocationConfig.normalizeProvider(selectedProvider)
@@ -361,7 +379,7 @@ private fun ProviderPicker(
         .filterNot { it == LocationConfig.PROVIDER_JITSI }
 
     SettingsDropdown(
-        label = "Service",
+        label = strings.serviceProviderLabel,
         selectedValue = selected,
         options = options,
         enabled = enabled,
@@ -375,6 +393,7 @@ private fun TransportPicker(
     selectedProvider: String,
     selectedTransport: String,
     enabled: Boolean,
+    strings: AppStrings,
     onTransportSelected: (String) -> Unit
 ) {
     val provider = LocationConfig.normalizeProvider(selectedProvider)
@@ -382,7 +401,7 @@ private fun TransportPicker(
     val options = LocationConfig.supportedTransportsForProvider(provider)
 
     SettingsDropdown(
-        label = "Transport",
+        label = strings.transportLabel,
         selectedValue = selected,
         options = options,
         enabled = enabled,
@@ -457,6 +476,7 @@ private fun Vp8OptionsCard(
     tracks: Int,
     onTracksChanged: (String) -> Unit,
     enabled: Boolean,
+    strings: AppStrings,
     onFpsChanged: (String) -> Unit,
     onBatchChanged: (String) -> Unit
 ) {
@@ -465,8 +485,8 @@ private fun Vp8OptionsCard(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         SectionTitle(
-            title = "VP8 options",
-            subtitle = "Fine-tune stream performance"
+            title = strings.vp8Options,
+            subtitle = strings.vp8OptionsSubtitle
         )
 
         Row(
@@ -475,21 +495,21 @@ private fun Vp8OptionsCard(
         ) {
             NumericTextField(
                 value = fps,
-                label = "FPS",
+                label = strings.fpsLabel,
                 enabled = enabled,
                 onValueChange = onFpsChanged,
                 modifier = Modifier.weight(1f)
             )
             NumericTextField(
                 value = batch,
-                label = "Batch",
+                label = strings.batchLabel,
                 enabled = enabled,
                 onValueChange = onBatchChanged,
                 modifier = Modifier.weight(1f)
             )
             NumericTextField(
                 value = tracks,
-                label = "Tracks (MIMO)",
+                label = strings.tracksLabel,
                 enabled = enabled,
                 onValueChange = onTracksChanged,
                 modifier = Modifier.weight(1f)
@@ -508,6 +528,7 @@ private fun SettingsTextField(
     isError: Boolean,
     supportingText: String?,
     leadingIcon: ImageVector,
+    clearContentDescription: String,
     onClear: () -> Unit,
     keyboardOptions: KeyboardOptions,
     keyboardActions: KeyboardActions = KeyboardActions(),
@@ -530,7 +551,7 @@ private fun SettingsTextField(
         trailingIcon = {
             if (value.isNotEmpty() && enabled) {
                 IconButton(onClick = onClear) {
-                    Icon(Icons.Default.Close, contentDescription = "Clear")
+                    Icon(Icons.Default.Close, contentDescription = clearContentDescription)
                 }
             }
         }
@@ -565,6 +586,7 @@ private fun ActionsBar(
     showDelete: Boolean,
     isSaving: Boolean,
     isFormValid: Boolean,
+    strings: AppStrings,
     onDelete: () -> Unit,
     onSave: () -> Unit
 ) {
@@ -580,7 +602,7 @@ private fun ActionsBar(
                 shape = CircleShape,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
-                Icon(Icons.Outlined.Delete, contentDescription = "Delete")
+                Icon(Icons.Outlined.Delete, contentDescription = strings.delete)
             }
 
             Spacer(modifier = Modifier.width(14.dp))
@@ -603,7 +625,7 @@ private fun ActionsBar(
             } else {
                 Icon(Icons.Rounded.Check, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Save", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text(strings.save, fontSize = 16.sp, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -619,8 +641,8 @@ private fun roomIdPlaceholder(provider: String): String {
     }
 }
 
-private fun roomIdLabel(provider: String): String {
-    return if (isJitsiProvider(provider)) "Room URL" else "Room ID"
+private fun roomIdLabel(provider: String, strings: AppStrings): String {
+    return if (isJitsiProvider(provider)) strings.roomUrlLabel else strings.roomIdLabel
 }
 
 private fun roomKeyboardType(provider: String): KeyboardType {
@@ -631,7 +653,7 @@ private fun isJitsiProvider(provider: String): Boolean {
     return LocationConfig.normalizeProvider(provider) == LocationConfig.PROVIDER_JITSI
 }
 
-private enum class ConnectionType(val label: String) {
-    Service("Service"),
-    Jitsi("Jitsi")
+private enum class ConnectionType {
+    Service,
+    Jitsi
 }

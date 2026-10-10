@@ -35,6 +35,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
@@ -79,6 +80,10 @@ import org.olcbox.app.data.model.formatSubscriptionRefreshInterval
 import org.olcbox.app.data.model.parseSubscriptionRefreshIntervalMs
 import org.olcbox.app.data.share.SubscriptionShareItem
 import org.olcbox.app.ui.features.home.components.LogLines
+import org.olcbox.app.ui.localization.AppLanguage
+import org.olcbox.app.ui.localization.AppLocalization
+import org.olcbox.app.ui.localization.AppStrings
+import org.olcbox.app.ui.localization.LocalAppStrings
 import org.olcbox.app.update.AppUpdateInfo
 import org.olcbox.app.update.AppUpdateSettings
 import kotlin.time.Clock
@@ -139,6 +144,7 @@ fun ApplicationSettingsSheet(
     onSocksProxyPasswordRegenerated: () -> Unit = {},
     onRoutingModeSelected: (String) -> Unit = {}
 ) {
+    val strings = LocalAppStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var route by remember { mutableStateOf(SharedSettingsRoute.Hub) }
     var selectedSubscriptionUrl by remember { mutableStateOf<String?>(null) }
@@ -183,16 +189,24 @@ fun ApplicationSettingsSheet(
                 SharedSettingsRoute.Hub -> SharedSettingsHubContent(
                     updateSettings = updateSettings,
                     subscriptionsCount = subscriptions.size,
+                    strings = strings,
                     onConnectionClick = { route = SharedSettingsRoute.Connection },
                     onSubscriptionsClick = { route = SharedSettingsRoute.Subscriptions },
                     onUpdatesClick = { route = SharedSettingsRoute.Updates },
-                    onLogsClick = { route = SharedSettingsRoute.Logs }
+                    onLogsClick = { route = SharedSettingsRoute.Logs },
+                    onLanguageClick = { route = SharedSettingsRoute.Language }
+                )
+
+                SharedSettingsRoute.Language -> SharedLanguageSettingsContent(
+                    strings = strings,
+                    onBack = { route = SharedSettingsRoute.Hub }
                 )
 
                 SharedSettingsRoute.Connection -> SharedConnectionSettingsContent(
                     summary = connectionSummary,
                     details = connectionDetails,
                     socksProxySettings = socksProxySettings,
+                    strings = strings,
                     routingModeTitle = routingModeOptions
                         .firstOrNull { it.id == selectedRoutingModeId }
                         ?.title
@@ -205,6 +219,7 @@ fun ApplicationSettingsSheet(
                 SharedSettingsRoute.ConnectionMode -> SharedConnectionModeSettingsContent(
                     options = routingModeOptions,
                     selectedId = selectedRoutingModeId,
+                    strings = strings,
                     onSelected = onRoutingModeSelected,
                     onBack = { route = SharedSettingsRoute.Connection }
                 )
@@ -213,6 +228,7 @@ fun ApplicationSettingsSheet(
                     SharedSocksProxySettingsContent(
                         settings = socksProxySettings,
                         isConnectionActive = isConnectionActive,
+                        strings = strings,
                         onBack = { route = SharedSettingsRoute.Connection },
                         onProxySettingsSaved = onSocksProxySettingsSaved,
                         onProxyPasswordRegenerated = onSocksProxyPasswordRegenerated
@@ -221,6 +237,7 @@ fun ApplicationSettingsSheet(
 
                 SharedSettingsRoute.Subscriptions -> SharedSubscriptionsSettingsContent(
                     subscriptions = subscriptions,
+                    strings = strings,
                     onBack = { route = SharedSettingsRoute.Hub },
                     onCopyConfigClick = onCopyConfigClick,
                     onSubscriptionClick = { item ->
@@ -234,6 +251,7 @@ fun ApplicationSettingsSheet(
                     if (item == null) {
                         SharedSubscriptionsSettingsContent(
                             subscriptions = subscriptions,
+                            strings = strings,
                             onBack = { route = SharedSettingsRoute.Hub },
                             onCopyConfigClick = onCopyConfigClick,
                             onSubscriptionClick = { selected ->
@@ -245,6 +263,7 @@ fun ApplicationSettingsSheet(
                         SharedSubscriptionDetailsContent(
                             item = item,
                             isRefreshing = refreshingSubscriptionUrl == item.url,
+                            strings = strings,
                             onBack = { route = SharedSettingsRoute.Subscriptions },
                             onShareClick = { onSubscriptionShareClick(item.url) },
                             onRefreshClick = {
@@ -269,6 +288,7 @@ fun ApplicationSettingsSheet(
                     settings = updateSettings,
                     statusText = updateStatusText,
                     downloadProgress = updateDownloadProgress,
+                    strings = strings,
                     onBack = { route = SharedSettingsRoute.Hub },
                     onIntervalSelected = onUpdateIntervalSelected,
                     onCheckUpdatesClick = onCheckUpdatesClick
@@ -276,6 +296,7 @@ fun ApplicationSettingsSheet(
 
                 SharedSettingsRoute.Logs -> SharedLogsSettingsContent(
                     logs = logs,
+                    strings = strings,
                     onBack = { route = SharedSettingsRoute.Hub },
                     onSaveClick = onSaveLogsClick,
                     onShareClick = onShareLogsClick
@@ -289,10 +310,12 @@ fun ApplicationSettingsSheet(
 private fun SharedSettingsHubContent(
     updateSettings: AppUpdateSettings,
     subscriptionsCount: Int,
+    strings: AppStrings,
     onConnectionClick: () -> Unit,
     onSubscriptionsClick: () -> Unit,
     onUpdatesClick: () -> Unit,
-    onLogsClick: () -> Unit
+    onLogsClick: () -> Unit,
+    onLanguageClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -303,36 +326,43 @@ private fun SharedSettingsHubContent(
     ) {
         SharedSettingsHeader(
             icon = Icons.Outlined.Settings,
-            title = "Application Settings",
+            title = strings.applicationSettingsTitle,
             subtitle = "SOCKS"
         )
 
         Spacer(Modifier.height(8.dp))
 
         SharedNavigationRow(
-            title = "Connection Settings",
-            value = "Mode and SOCKS5 proxy",
+            title = strings.connectionSettings,
+            value = strings.connectionSettingsSubtitle,
             icon = Icons.Rounded.Public,
             onClick = onConnectionClick
         )
 
         SharedNavigationRow(
-            title = "Subscriptions & Sharing",
-            value = subscriptionsCount.subscriptionSummary(),
+            title = strings.subscriptionsAndSharing,
+            value = strings.subscriptionsCount(subscriptionsCount),
             icon = Icons.Outlined.Share,
             onClick = onSubscriptionsClick
         )
 
         SharedNavigationRow(
-            title = "Update Settings",
-            value = "Nightly · every ${updateSettings.intervalHours}h",
+            title = strings.updateSettings,
+            value = strings.updateSettingsSubtitle(updateSettings.intervalHours),
             icon = Icons.Outlined.Refresh,
             onClick = onUpdatesClick
         )
 
         SharedNavigationRow(
-            title = "Application Logs",
-            value = "Diagnostics and export",
+            title = strings.languageSetting,
+            value = AppLocalization.currentLanguage.displayName,
+            icon = Icons.Outlined.Language,
+            onClick = onLanguageClick
+        )
+
+        SharedNavigationRow(
+            title = strings.applicationLogs,
+            value = strings.applicationLogsSubtitle,
             icon = Icons.Outlined.History,
             onClick = onLogsClick
         )
@@ -354,10 +384,53 @@ private fun SharedSettingsHubContent(
 }
 
 @Composable
+private fun SharedLanguageSettingsContent(
+    strings: AppStrings,
+    onBack: () -> Unit
+) {
+    val current = AppLocalization.currentLanguage
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 32.dp)
+    ) {
+        SharedDetailHeader(
+            title = strings.languageSetting,
+            subtitle = current.displayName,
+            onBack = onBack,
+            backContentDescription = strings.back
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            AppLanguage.entries.forEach { lang ->
+                SharedSelectableSettingsCard(
+                    selected = lang == current,
+                    icon = Icons.Outlined.Language,
+                    title = lang.displayName,
+                    subtitle = when (lang) {
+                        AppLanguage.System -> strings.auto
+                        AppLanguage.Russian -> "Русский язык"
+                        AppLanguage.English -> "English language"
+                    },
+                    onClick = {
+                        AppLocalization.userSelectedLanguage = lang
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun SharedConnectionSettingsContent(
     summary: String,
     details: List<Pair<String, String>>,
     socksProxySettings: ApplicationSocksProxySettings?,
+    strings: AppStrings,
     routingModeTitle: String,
     onConnectionModeClick: () -> Unit,
     onSocksProxyClick: () -> Unit,
@@ -370,16 +443,17 @@ private fun SharedConnectionSettingsContent(
             .padding(top = 16.dp, bottom = 32.dp)
     ) {
         SharedDetailHeader(
-            title = "Connection Settings",
+            title = strings.connectionSettings,
             subtitle = summary,
-            onBack = onBack
+            onBack = onBack,
+            backContentDescription = strings.back
         )
 
         Spacer(Modifier.height(20.dp))
 
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SharedNavigationRow(
-                title = "Connection Mode",
+                title = strings.connectionMode,
                 value = routingModeTitle,
                 icon = Icons.Rounded.Public,
                 onClick = onConnectionModeClick
@@ -387,7 +461,7 @@ private fun SharedConnectionSettingsContent(
 
             if (socksProxySettings != null) {
                 SharedNavigationRow(
-                    title = "SOCKS5 Proxy",
+                    title = strings.socks5Proxy,
                     value = "${socksProxySettings.host}:${socksProxySettings.port}",
                     icon = Icons.Rounded.Public,
                     onClick = onSocksProxyClick
@@ -407,6 +481,7 @@ private fun SharedConnectionSettingsContent(
 private fun SharedConnectionModeSettingsContent(
     options: List<ApplicationRoutingModeOption>,
     selectedId: String,
+    strings: AppStrings,
     onSelected: (String) -> Unit,
     onBack: () -> Unit
 ) {
@@ -417,10 +492,11 @@ private fun SharedConnectionModeSettingsContent(
             .padding(bottom = 32.dp)
     ) {
         SharedDetailHeader(
-            title = "Connection Mode",
+            title = strings.connectionMode,
             subtitle = options.firstOrNull { it.id == selectedId }?.title
-                ?: "Local SOCKS5 proxy",
-            onBack = onBack
+                ?: strings.socks5Proxy,
+            onBack = onBack,
+            backContentDescription = strings.back
         )
 
         Spacer(Modifier.height(20.dp))
@@ -443,6 +519,7 @@ private fun SharedConnectionModeSettingsContent(
 private fun SharedSocksProxySettingsContent(
     settings: ApplicationSocksProxySettings,
     isConnectionActive: Boolean,
+    strings: AppStrings,
     onBack: () -> Unit,
     onProxySettingsSaved: (String, String, Int) -> Unit,
     onProxyPasswordRegenerated: () -> Unit
@@ -471,9 +548,10 @@ private fun SharedSocksProxySettingsContent(
             .padding(bottom = 32.dp)
     ) {
         SharedDetailHeader(
-            title = "SOCKS5 Proxy",
+            title = strings.socks5Proxy,
             subtitle = settings.host,
-            onBack = onBack
+            onBack = onBack,
+            backContentDescription = strings.back
         )
 
         Spacer(Modifier.height(20.dp))
@@ -483,7 +561,7 @@ private fun SharedSocksProxySettingsContent(
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SharedSectionLabel("Endpoint")
+                SharedSectionLabel(strings.endpoint)
 
                 SharedSocksProxyTextField(
                     value = editedHost,
@@ -493,12 +571,12 @@ private fun SharedSocksProxySettingsContent(
                             .replace("\n", "")
                             .trim()
                     },
-                    label = "Listen address",
+                    label = strings.listenAddress,
                     placeholder = "127.0.0.1",
                     enabled = false,
                     isError = !hostValid,
                     leadingIcon = Icons.Rounded.Public,
-                    supportingText = if (!hostValid) "Listen address is required" else null,
+                    supportingText = if (!hostValid) strings.listenAddressRequired else null,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                 )
 
@@ -507,16 +585,16 @@ private fun SharedSocksProxySettingsContent(
                     onValueChange = { value ->
                         editedPort = value.filter { it.isDigit() }.take(5)
                     },
-                    label = "Port",
+                    label = strings.port,
                     placeholder = ApplicationSocksProxySettings.DEFAULT_PORT.toString(),
                     enabled = true,
                     isError = editedPort.isBlank() || !portValid,
                     leadingIcon = Icons.Rounded.Public,
                     supportingText = when {
-                        editedPort.isBlank() -> "Port is required"
-                        !portValid -> "Use ${ApplicationSocksProxySettings.MIN_PORT}-${ApplicationSocksProxySettings.MAX_PORT}"
-                        portChanged && isConnectionActive -> "Saving restarts the active connection"
-                        portChanged -> "Unsaved change"
+                        editedPort.isBlank() -> strings.portRequired
+                        !portValid -> strings.portRange(ApplicationSocksProxySettings.MIN_PORT, ApplicationSocksProxySettings.MAX_PORT)
+                        portChanged && isConnectionActive -> strings.savingRestartsActiveConnection
+                        portChanged -> strings.unsavedChange
                         else -> null
                     },
                     keyboardOptions = KeyboardOptions(
@@ -527,20 +605,20 @@ private fun SharedSocksProxySettingsContent(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SharedSectionLabel("Credentials")
+                SharedSectionLabel(strings.credentials)
 
                 SharedSocksProxyTextField(
                     value = editedUsername,
                     onValueChange = { editedUsername = it.take(ApplicationSocksProxySettings.MAX_CREDENTIAL_LENGTH) },
-                    label = "Username",
+                    label = strings.username,
                     placeholder = "olcbox...",
                     enabled = true,
                     isError = editedUsername.isBlank(),
                     leadingIcon = Icons.Rounded.Person,
                     supportingText = when {
-                        editedUsername.isBlank() -> "Username is required"
-                        usernameChanged && isConnectionActive -> "Saving restarts the active connection"
-                        usernameChanged -> "Unsaved change"
+                        editedUsername.isBlank() -> strings.usernameRequired
+                        usernameChanged && isConnectionActive -> strings.savingRestartsActiveConnection
+                        usernameChanged -> strings.unsavedChange
                         else -> null
                     },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -548,15 +626,15 @@ private fun SharedSocksProxySettingsContent(
                 SharedSocksProxyTextField(
                     value = editedPassword,
                     onValueChange = { editedPassword = it.take(ApplicationSocksProxySettings.MAX_CREDENTIAL_LENGTH) },
-                    label = "Password",
-                    placeholder = "Generated password",
+                    label = strings.password,
+                    placeholder = strings.generatedPassword,
                     enabled = true,
                     isError = editedPassword.isBlank(),
                     leadingIcon = Icons.Rounded.Key,
                     supportingText = when {
-                        editedPassword.isBlank() -> "Password is required"
-                        passwordChanged && isConnectionActive -> "Saving restarts the active connection"
-                        passwordChanged -> "Unsaved change"
+                        editedPassword.isBlank() -> strings.passwordRequired
+                        passwordChanged && isConnectionActive -> strings.savingRestartsActiveConnection
+                        passwordChanged -> strings.unsavedChange
                         else -> null
                     },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
@@ -569,7 +647,7 @@ private fun SharedSocksProxySettingsContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onProxyPasswordRegenerated) {
-                    Text("Regenerate password")
+                    Text(strings.regeneratePassword)
                 }
                 Spacer(Modifier.width(8.dp))
                 Button(
@@ -584,7 +662,7 @@ private fun SharedSocksProxySettingsContent(
                 ) {
                     Icon(Icons.Rounded.Check, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Save")
+                    Text(strings.save)
                 }
             }
         }
@@ -624,6 +702,7 @@ private fun SharedUpdatesSettingsContent(
     settings: AppUpdateSettings,
     statusText: String?,
     downloadProgress: Float?,
+    strings: AppStrings,
     onBack: () -> Unit,
     onIntervalSelected: (Int) -> Unit,
     onCheckUpdatesClick: () -> Unit
@@ -637,14 +716,15 @@ private fun SharedUpdatesSettingsContent(
             .padding(top = 16.dp, bottom = 12.dp)
     ) {
         SharedDetailHeader(
-            title = "Updates",
-            subtitle = "Current version ${CurrentAppInfo.value.version}",
-            onBack = onBack
+            title = strings.updatesTitle,
+            subtitle = strings.currentVersion(CurrentAppInfo.value.version),
+            onBack = onBack,
+            backContentDescription = strings.back
         )
 
         Spacer(Modifier.height(18.dp))
 
-        SharedSectionLabel("Check Interval")
+        SharedSectionLabel(strings.checkInterval)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             AppUpdateSettings.INTERVAL_PRESETS.forEach { hours ->
@@ -669,13 +749,13 @@ private fun SharedUpdatesSettingsContent(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = "Last check",
+                    text = strings.lastCheck,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = settings.lastCheckAtEpochMs?.formatEpochMs() ?: "Not checked yet",
+                    text = settings.lastCheckAtEpochMs?.let { strings.relativeTime(it, Clock.System.now().toEpochMilliseconds()) } ?: strings.notCheckedYet,
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -703,7 +783,7 @@ private fun SharedUpdatesSettingsContent(
                 .fillMaxWidth()
                 .height(52.dp)
         ) {
-            Text("Check now")
+            Text(strings.checkNow)
         }
     }
 }
@@ -711,6 +791,7 @@ private fun SharedUpdatesSettingsContent(
 @Composable
 private fun SharedSubscriptionsSettingsContent(
     subscriptions: List<SubscriptionShareItem>,
+    strings: AppStrings,
     onBack: () -> Unit,
     onCopyConfigClick: () -> Unit,
     onSubscriptionClick: (SubscriptionShareItem) -> Unit
@@ -723,9 +804,10 @@ private fun SharedSubscriptionsSettingsContent(
             .padding(top = 16.dp, bottom = 12.dp)
     ) {
         SharedDetailHeader(
-            title = "Subscriptions",
-            subtitle = subscriptions.size.subscriptionSummary(),
-            onBack = onBack
+            title = strings.subscriptions,
+            subtitle = strings.subscriptionsCount(subscriptions.size),
+            onBack = onBack,
+            backContentDescription = strings.back
         )
 
         Spacer(Modifier.height(16.dp))
@@ -739,23 +821,24 @@ private fun SharedSubscriptionsSettingsContent(
         ) {
             if (subscriptions.isEmpty()) {
                 SharedEmptyState(
-                    title = "No subscriptions",
-                    subtitle = "Import a subscription from the home screen to manage it here."
+                    title = strings.noSubscriptions,
+                    subtitle = strings.noSubscriptionsSubtitle
                 )
             } else {
                 subscriptions.forEach { item ->
                     SharedSubscriptionRow(
                         item = item,
+                        strings = strings,
                         onClick = { onSubscriptionClick(item) }
                     )
                 }
             }
 
             Spacer(Modifier.height(6.dp))
-            SharedSectionLabel("Backup & export")
+            SharedSectionLabel(strings.backupAndExport)
             SharedNavigationRow(
-                title = "Export full configuration",
-                value = "Copy all locations to clipboard",
+                title = strings.exportFullConfig,
+                value = strings.exportFullConfigSubtitle,
                 icon = Icons.Outlined.ContentPaste,
                 showChevron = false,
                 onClick = onCopyConfigClick
@@ -768,6 +851,7 @@ private fun SharedSubscriptionsSettingsContent(
 private fun SharedSubscriptionDetailsContent(
     item: SubscriptionShareItem,
     isRefreshing: Boolean,
+    strings: AppStrings,
     onBack: () -> Unit,
     onShareClick: () -> Unit,
     onRefreshClick: () -> Unit,
@@ -792,9 +876,10 @@ private fun SharedSubscriptionDetailsContent(
             .padding(top = 16.dp, bottom = 12.dp)
     ) {
         SharedDetailHeader(
-            title = "Subscription",
+            title = strings.subscriptionDetailsTitle,
             subtitle = item.name,
-            onBack = onBack
+            onBack = onBack,
+            backContentDescription = strings.back
         )
 
         Spacer(Modifier.height(16.dp))
@@ -806,19 +891,21 @@ private fun SharedSubscriptionDetailsContent(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            SharedSectionLabel("Overview")
-            SharedSubscriptionStatusCard(item)
+            SharedSectionLabel(strings.overview)
+            SharedSubscriptionStatusCard(item, strings)
 
-            SharedSectionLabel("Source")
+            SharedSectionLabel(strings.sourceLabel)
             SharedSubscriptionSourceCard(
                 url = item.url,
+                strings = strings,
                 onShareClick = onShareClick
             )
 
-            SharedSectionLabel("Updates")
+            SharedSectionLabel(strings.updatesTitle)
             SharedSubscriptionUpdateCard(
                 item = item,
                 isRefreshing = isRefreshing,
+                strings = strings,
                 onScheduleClick = {
                     refreshIntervalInput = item.manualUpdateIntervalMs
                         ?.let(::formatSubscriptionRefreshInterval)
@@ -831,6 +918,7 @@ private fun SharedSubscriptionDetailsContent(
             Spacer(Modifier.height(6.dp))
             SharedDangerAction(
                 locationCount = item.locationCount,
+                strings = strings,
                 onClick = { showDeleteDialog = true }
             )
             Spacer(Modifier.height(18.dp))
@@ -845,16 +933,16 @@ private fun SharedSubscriptionDetailsContent(
 
         AlertDialog(
             onDismissRequest = { showRefreshDialog = false },
-            title = { Text("Refresh schedule") },
+            title = { Text(strings.refreshSchedule) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "Choose how often this subscription should be checked.",
+                        text = strings.refreshScheduleSubtitle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(
-                            "Auto" to "",
+                            strings.auto to "",
                             "1h" to "1h",
                             "6h" to "6h",
                             "1d" to "1d"
@@ -874,16 +962,16 @@ private fun SharedSubscriptionDetailsContent(
                                 .filter { it.isDigit() || it in "smhd" }
                                 .take(8)
                         },
-                        label = { Text("Custom interval") },
-                        placeholder = { Text("Auto") },
+                        label = { Text(strings.customInterval) },
+                        placeholder = { Text(strings.auto) },
                         supportingText = {
                             Text(
                                 if (hasError) {
-                                    "Use 5m–30d, for example 10m, 6h, or 1d"
+                                    strings.subscriptionRefreshRateError
                                 } else if (refreshIntervalInput.isBlank()) {
-                                    item.sourceScheduleDescription()
+                                    item.sourceScheduleDescription(strings)
                                 } else {
-                                    "A custom interval overrides the subscription value."
+                                    strings.customIntervalHint
                                 }
                             )
                         },
@@ -901,12 +989,12 @@ private fun SharedSubscriptionDetailsContent(
                         showRefreshDialog = false
                     }
                 ) {
-                    Text("Save")
+                    Text(strings.save)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRefreshDialog = false }) {
-                    Text("Cancel")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -915,13 +1003,9 @@ private fun SharedSubscriptionDetailsContent(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete subscription?") },
+            title = { Text(strings.deleteSubscriptionTitle) },
             text = {
-                Text(
-                    "This will delete “${item.name}” and " +
-                        "${item.locationCount.locationCountLabel()} imported from it. " +
-                        "This cannot be undone."
-                )
+                Text(strings.deleteSubscriptionMessage(item.name, strings.locationsCount(item.locationCount)))
             },
             confirmButton = {
                 TextButton(
@@ -930,12 +1014,12 @@ private fun SharedSubscriptionDetailsContent(
                         onDeleteClick()
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(strings.delete, color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -945,6 +1029,7 @@ private fun SharedSubscriptionDetailsContent(
 @Composable
 private fun SharedLogsSettingsContent(
     logs: List<String>,
+    strings: AppStrings,
     onBack: () -> Unit,
     onSaveClick: () -> Unit,
     onShareClick: () -> Unit
@@ -958,9 +1043,10 @@ private fun SharedLogsSettingsContent(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             SharedDetailHeader(
-                title = "Application Logs",
-                subtitle = if (logs.isEmpty()) "No entries" else "${logs.size} entries",
+                title = strings.applicationLogs,
+                subtitle = strings.logsEntriesCount(logs.size),
                 onBack = onBack,
+                backContentDescription = strings.back,
                 modifier = Modifier.weight(1f)
             )
 
@@ -968,13 +1054,13 @@ private fun SharedLogsSettingsContent(
                 enabled = logs.isNotEmpty(),
                 onClick = onSaveClick
             ) {
-                Text("Save")
+                Text(strings.save)
             }
             TextButton(
                 enabled = logs.isNotEmpty(),
                 onClick = onShareClick
             ) {
-                Text("Share")
+                Text(strings.share)
             }
         }
 
@@ -998,49 +1084,9 @@ private fun SharedLogsSettingsContent(
 }
 
 @Composable
-private fun SharedUpdateOfferCard(
-    offer: AppUpdateInfo,
-    onDownload: () -> Unit,
-    onLater: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(
-                text = "Обновите приложение",
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = "${offer.version} · ${offer.asset.name}",
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                fontSize = 13.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onLater) {
-                    Text("Later")
-                }
-                Button(onClick = onDownload) {
-                    Text("Download")
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun SharedSubscriptionRow(
     item: SubscriptionShareItem,
+    strings: AppStrings,
     onClick: () -> Unit
 ) {
     Surface(
@@ -1069,13 +1115,13 @@ private fun SharedSubscriptionRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = item.locationCount.locationCountLabel(),
+                    text = strings.locationsCount(item.locationCount),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
                     maxLines = 1
                 )
                 Text(
-                    text = item.listScheduleDescription(),
+                    text = item.listScheduleDescription(strings),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
                     maxLines = 1,
@@ -1093,7 +1139,11 @@ private fun SharedSubscriptionRow(
 }
 
 @Composable
-private fun SharedSubscriptionStatusCard(item: SubscriptionShareItem) {
+private fun SharedSubscriptionStatusCard(
+    item: SubscriptionShareItem,
+    strings: AppStrings
+) {
+    val now = Clock.System.now().toEpochMilliseconds()
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -1105,22 +1155,22 @@ private fun SharedSubscriptionStatusCard(item: SubscriptionShareItem) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             SharedStatusMetric(
-                label = "Locations",
+                label = strings.locationsLabel,
                 value = item.locationCount.toString(),
                 modifier = Modifier.weight(1f)
             )
             SharedStatusDivider()
             SharedStatusMetric(
-                label = "Updated",
-                value = item.lastRefreshAtEpochMs?.relativeTime() ?: "Not yet",
+                label = strings.updatedLabel,
+                value = item.lastRefreshAtEpochMs?.let { strings.relativeTime(it, now) } ?: strings.notYet,
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 14.dp)
             )
             SharedStatusDivider()
             SharedStatusMetric(
-                label = "Next",
-                value = item.nextRefreshAtEpochMs?.relativeTime() ?: "On app start",
+                label = strings.nextLabel,
+                value = item.nextRefreshAtEpochMs?.let { strings.relativeTime(it, now) } ?: strings.onAppStart,
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 14.dp)
@@ -1148,7 +1198,7 @@ private fun SharedStatusMetric(
             overflow = TextOverflow.Ellipsis
         )
         Text(
-            text = label,
+            label = label,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.sp,
             maxLines = 1
@@ -1170,6 +1220,7 @@ private fun SharedStatusDivider() {
 private fun SharedSubscriptionUpdateCard(
     item: SubscriptionShareItem,
     isRefreshing: Boolean,
+    strings: AppStrings,
     onScheduleClick: () -> Unit,
     onRefreshClick: () -> Unit
 ) {
@@ -1203,14 +1254,14 @@ private fun SharedSubscriptionUpdateCard(
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = item.scheduleDescription(),
+                        text = item.scheduleDescription(strings),
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1
                     )
                     Text(
-                        text = item.scheduleTitle(),
+                        text = item.scheduleTitle(strings),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                         maxLines = 1
@@ -1250,7 +1301,7 @@ private fun SharedSubscriptionUpdateCard(
                     )
                 }
                 Spacer(Modifier.width(8.dp))
-                Text(if (isRefreshing) "Refreshing…" else "Refresh now")
+                Text(if (isRefreshing) strings.refreshingEllipsis else strings.refreshNow)
             }
         }
     }
@@ -1259,6 +1310,7 @@ private fun SharedSubscriptionUpdateCard(
 @Composable
 private fun SharedSubscriptionSourceCard(
     url: String,
+    strings: AppStrings,
     onShareClick: () -> Unit
 ) {
     Surface(
@@ -1297,7 +1349,7 @@ private fun SharedSubscriptionSourceCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "Subscription link",
+                    text = strings.subscriptionLink,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp,
                     maxLines = 1
@@ -1306,7 +1358,7 @@ private fun SharedSubscriptionSourceCard(
             IconButton(onClick = onShareClick) {
                 Icon(
                     imageVector = Icons.Outlined.Share,
-                    contentDescription = "Share subscription"
+                    contentDescription = strings.shareSubscriptionContentDescription
                 )
             }
         }
@@ -1316,6 +1368,7 @@ private fun SharedSubscriptionSourceCard(
 @Composable
 private fun SharedDangerAction(
     locationCount: Int,
+    strings: AppStrings,
     onClick: () -> Unit
 ) {
     Surface(
@@ -1346,14 +1399,14 @@ private fun SharedDangerAction(
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Delete subscription",
+                    text = strings.deleteSubscriptionAction,
                     color = MaterialTheme.colorScheme.error,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = "Remove it and ${locationCount.locationCountLabel()}",
+                    text = strings.deleteSubscriptionSubtitle(strings.locationsCount(locationCount)),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
@@ -1586,6 +1639,7 @@ private fun SharedDetailHeader(
     title: String,
     subtitle: String,
     onBack: () -> Unit,
+    backContentDescription: String = "Back",
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -1601,7 +1655,7 @@ private fun SharedDetailHeader(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Back"
+                    contentDescription = backContentDescription
                 )
             }
         }
@@ -1679,48 +1733,35 @@ private enum class SharedSettingsRoute {
     SubscriptionDetails,
     Updates,
     Logs,
-    SocksProxy
+    SocksProxy,
+    Language
 }
 
-private fun Int.subscriptionSummary(): String {
-    return when (this) {
-        0 -> "No subscriptions"
-        1 -> "1 subscription"
-        else -> "$this subscriptions"
-    }
+private fun SubscriptionShareItem.scheduleTitle(strings: AppStrings): String {
+    return if (manualUpdateIntervalMs == null) strings.scheduleAutomatic else strings.scheduleCustom
 }
 
-private fun Int.locationCountLabel(): String {
-    return when (this) {
-        1 -> "1 location"
-        else -> "$this locations"
-    }
-}
-
-private fun SubscriptionShareItem.scheduleTitle(): String {
-    return if (manualUpdateIntervalMs == null) "Automatic" else "Custom schedule"
-}
-
-private fun SubscriptionShareItem.scheduleDescription(): String {
+private fun SubscriptionShareItem.scheduleDescription(strings: AppStrings): String {
     val interval = updateIntervalMs
         ?: updateIntervalHours?.times(60L * 60L * 1_000L)
-    return interval?.friendlySchedule() ?: "Uses the subscription schedule"
+    return interval?.let { strings.friendlySchedule(it) } ?: strings.scheduleUsesSubscription
 }
 
-private fun SubscriptionShareItem.sourceScheduleDescription(): String {
+private fun SubscriptionShareItem.sourceScheduleDescription(strings: AppStrings): String {
     val interval = sourceUpdateIntervalMs
         ?: updateIntervalHours?.times(60L * 60L * 1_000L)
-    return interval?.let { "Auto uses ${it.friendlySchedule().lowercase()}." }
-        ?: "Auto uses the schedule supplied by the subscription."
+    return interval?.let { strings.autoScheduleWithPresetHint(strings.friendlySchedule(it).lowercase()) }
+        ?: strings.autoScheduleDefaultHint
 }
 
-private fun SubscriptionShareItem.listScheduleDescription(): String {
+private fun SubscriptionShareItem.listScheduleDescription(strings: AppStrings): String {
     val schedule = if (manualUpdateIntervalMs == null) {
-        "Automatic"
+        strings.scheduleAutomatic
     } else {
-        updateIntervalMs?.friendlySchedule() ?: "Custom schedule"
+        updateIntervalMs?.let { strings.friendlySchedule(it) } ?: strings.scheduleCustom
     }
-    val refreshed = lastRefreshAtEpochMs?.relativeTime()?.let { "Updated $it" } ?: "Not updated yet"
+    val now = Clock.System.now().toEpochMilliseconds()
+    val refreshed = lastRefreshAtEpochMs?.let { strings.relativeTime(it, now) }?.let { "${strings.updatedLabel} $it" } ?: strings.notYet
     return "$schedule · $refreshed"
 }
 
@@ -1729,47 +1770,4 @@ private fun String.subscriptionHost(): String {
         .substringBefore('/')
         .substringBefore('?')
         .ifBlank { "Subscription source" }
-}
-
-private fun Long.friendlySchedule(): String {
-    val minuteMs = 60L * 1_000L
-    val hourMs = 60L * minuteMs
-    val dayMs = 24L * hourMs
-    return when {
-        this == dayMs -> "Every day"
-        this % dayMs == 0L -> "Every ${this / dayMs} days"
-        this == hourMs -> "Every hour"
-        this % hourMs == 0L -> "Every ${this / hourMs} hours"
-        this == minuteMs -> "Every minute"
-        else -> "Every ${(this / minuteMs).coerceAtLeast(1L)} minutes"
-    }
-}
-
-private fun Long.relativeTime(): String {
-    val deltaMs = this - Clock.System.now().toEpochMilliseconds()
-    val isFuture = deltaMs > 0L
-    val absoluteMs = if (deltaMs == Long.MIN_VALUE) Long.MAX_VALUE else {
-        if (deltaMs < 0L) -deltaMs else deltaMs
-    }
-    val minuteMs = 60L * 1_000L
-    val hourMs = 60L * minuteMs
-    val dayMs = 24L * hourMs
-    val value = when {
-        absoluteMs < minuteMs -> "just now"
-        absoluteMs < hourMs -> "${absoluteMs / minuteMs} min"
-        absoluteMs < dayMs -> "${absoluteMs / hourMs} hr"
-        absoluteMs < 7L * dayMs -> "${absoluteMs / dayMs} d"
-        else -> return formatEpochMs()
-    }
-    return if (value == "just now") value else if (isFuture) "in $value" else "$value ago"
-}
-
-private fun Long.formatEpochMs(): String {
-    return runCatching {
-        Instant.fromEpochMilliseconds(this).toString()
-            .substringBefore('.')
-            .replace('T', ' ')
-    }.getOrElse {
-        toString()
-    }
 }
