@@ -212,6 +212,8 @@ fun LocationSettingsScreen(
                 Vp8OptionsCard(
                     fps = config.vp8Fps,
                     batch = config.vp8Batch,
+                    tracks = config.vp8Tracks,
+                    onTracksChanged = viewModel::onVp8TracksChanged,
                     enabled = !isSaving,
                     onFpsChanged = viewModel::onVp8FpsChanged,
                     onBatchChanged = viewModel::onVp8BatchChanged
@@ -452,6 +454,8 @@ private fun SettingsDropdown(
 private fun Vp8OptionsCard(
     fps: Int,
     batch: Int,
+    tracks: Int,
+    onTracksChanged: (String) -> Unit,
     enabled: Boolean,
     onFpsChanged: (String) -> Unit,
     onBatchChanged: (String) -> Unit
@@ -481,6 +485,13 @@ private fun Vp8OptionsCard(
                 label = "Batch",
                 enabled = enabled,
                 onValueChange = onBatchChanged,
+                modifier = Modifier.weight(1f)
+            )
+            NumericTextField(
+                value = tracks,
+                label = "Tracks (MIMO)",
+                enabled = enabled,
+                onValueChange = onTracksChanged,
                 modifier = Modifier.weight(1f)
             )
         }

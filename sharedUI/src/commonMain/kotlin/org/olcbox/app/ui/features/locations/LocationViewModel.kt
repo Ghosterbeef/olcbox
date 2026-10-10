@@ -415,6 +415,12 @@ class LocationViewModel(
         )
     }
 
+    fun onVp8TracksChanged(value: String) {
+        editingConfig = editingConfig.copy(
+            vp8Tracks = value.filter { it.isDigit() }.toIntOrNull() ?: 1
+        )
+    }
+
     fun onDnsServerChanged(value: String) {
         editingConfig = editingConfig.copy(
             dnsServer = value

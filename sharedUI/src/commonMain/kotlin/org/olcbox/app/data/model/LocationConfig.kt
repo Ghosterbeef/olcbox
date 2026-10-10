@@ -28,6 +28,8 @@ data class LocationConfig(
     val vp8Fps: Int = DEFAULT_VP8_FPS,
     @SerialName("vp8_batch")
     val vp8Batch: Int = DEFAULT_VP8_BATCH,
+    @SerialName("vp8_tracks")
+    val vp8Tracks: Int = DEFAULT_VP8_TRACKS,
     @SerialName("dns_server")
     val dnsServer: String = ""
 ) {
@@ -42,7 +44,8 @@ data class LocationConfig(
             transport = normalizedTransport,
             dnsServer = dnsServer.trim().take(MAX_DNS_SERVER_LENGTH),
             vp8Fps = sanitizeVp8Fps(vp8Fps),
-            vp8Batch = sanitizeVp8Batch(vp8Batch)
+            vp8Batch = sanitizeVp8Batch(vp8Batch),
+            vp8Tracks = sanitizeVp8Tracks(vp8Tracks)
         )
     }
 
@@ -68,6 +71,7 @@ data class LocationConfig(
 
         const val DEFAULT_VP8_FPS = 60
         const val DEFAULT_VP8_BATCH = 64
+        const val DEFAULT_VP8_TRACKS = 1
         const val MAX_DNS_SERVER_LENGTH = 255
 
         val supportedBypassProviders = listOf(
@@ -158,6 +162,8 @@ data class LocationConfig(
 
         fun sanitizeVp8Batch(value: Int): Int = value.coerceIn(1, 64)
 
+        fun sanitizeVp8Tracks(value: Int): Int = value.coerceIn(1, 8)
+
         fun isValidDnsServer(value: String): Boolean {
             val endpoint = value.trim()
             if (endpoint.isEmpty()) return true
@@ -216,18 +222,20 @@ data class LocationConfig(
 @Serializable
 data class Vp8TransportConfig(
     val fps: Int = LocationConfig.DEFAULT_VP8_FPS,
-    val batch: Int = LocationConfig.DEFAULT_VP8_BATCH
+    val batch: Int = LocationConfig.DEFAULT_VP8_BATCH,
+    val tracks: Int = LocationConfig.DEFAULT_VP8_TRACKS
 ) {
     fun normalized(): Vp8TransportConfig {
         return copy(
             fps = LocationConfig.sanitizeVp8Fps(fps),
-            batch = LocationConfig.sanitizeVp8Batch(batch)
+            batch = LocationConfig.sanitizeVp8Batch(batch),
+            tracks = LocationConfig.sanitizeVp8Tracks(tracks)
         )
     }
 
     companion object {
         fun from(config: LocationConfig): Vp8TransportConfig {
-            return Vp8TransportConfig(config.vp8Fps, config.vp8Batch).normalized()
+            return Vp8TransportConfig(config.vp8Fps, config.vp8Batch, config.vp8Tracks).normalized()
         }
     }
 }
@@ -575,6 +583,10 @@ data class LocationEntry(
     val legacyVp8Batch: Int? = null,
     @SerialName("vp8Batch")
     val legacyVp8BatchCamel: Int? = null,
+    @SerialName("vp8_tracks")
+    val legacyVp8Tracks: Int? = null,
+    @SerialName("vp8Tracks")
+    val legacyVp8TracksCamel: Int? = null,
     @SerialName("dns_server")
     val dnsServer: String? = null,
     @SerialName("dnsServer")
@@ -607,6 +619,10 @@ data class LocationEntry(
                     ?: legacyVp8Batch
                     ?: legacyVp8BatchCamel
                     ?: LocationConfig.DEFAULT_VP8_BATCH,
+                vp8Tracks = vp8Options?.tracks
+                    ?: legacyVp8Tracks
+                    ?: legacyVp8TracksCamel
+                    ?: LocationConfig.DEFAULT_VP8_TRACKS,
                 dnsServer = firstNotBlank(dnsServer, legacyDnsServerCamel)
             ).normalized()
         }

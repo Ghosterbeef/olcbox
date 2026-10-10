@@ -10,7 +10,7 @@ object ConfigShareService {
         val normalized = config.normalized()
         val transport = when (normalized.transport) {
             LocationConfig.TRANSPORT_VP8CHANNEL -> {
-                "vp8channel<vp8-fps=${normalized.vp8Fps}&vp8-batch=${normalized.vp8Batch}>"
+                "vp8channel<vp8-fps=${normalized.vp8Fps}&vp8-batch=${normalized.vp8Batch}&vp8-tracks=${normalized.vp8Tracks}>"
             }
             LocationConfig.TRANSPORT_SEICHANNEL -> {
                 "seichannel<fps=60&batch=64&frag=900&ack-ms=2000>"

@@ -44,6 +44,7 @@ internal data class OlcRtcCommand(
                     appendLine("vp8:")
                     appendLine("  fps: ${config.vp8Fps}")
                     appendLine("  batch_size: ${config.vp8Batch}")
+                    appendLine("  tracks: ${config.vp8Tracks}")
                 }
                 LocationConfig.TRANSPORT_SEICHANNEL -> {
                     appendLine("sei:")

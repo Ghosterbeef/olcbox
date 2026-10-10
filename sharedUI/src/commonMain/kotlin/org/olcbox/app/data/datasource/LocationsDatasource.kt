@@ -1055,6 +1055,14 @@ class LocationsRepositoryImpl(
             transportArgInt(transportArgs, "-vp8-batch")
         ) ?: LocationConfig.DEFAULT_VP8_BATCH
 
+        val vp8Tracks = firstInt(
+            source.int("vp8_tracks"),
+            source.int("vp8Tracks"),
+            root.int("vp8_tracks"),
+            root.int("vp8Tracks"),
+            transportArgInt(transportArgs, "-vp8-tracks")
+        ) ?: LocationConfig.DEFAULT_VP8_TRACKS
+
         val location = LocationConfig(
             name = firstNotBlank(source.string("name"), root.string("name")),
             id = firstNotBlank(
@@ -1078,6 +1086,7 @@ class LocationsRepositoryImpl(
             ),
             vp8Fps = vp8Fps,
             vp8Batch = vp8Batch,
+            vp8Tracks = vp8Tracks,
             dnsServer = firstNotBlank(
                 source.string("dns_server"),
                 source.string("dnsServer"),
@@ -1222,7 +1231,11 @@ class LocationsRepositoryImpl(
                 ?: LocationConfig.DEFAULT_VP8_FPS,
             vp8Batch = transportOptions["vp8-batch"]
                 ?: transportOptions["batch"]
-                ?: LocationConfig.DEFAULT_VP8_BATCH
+                ?: LocationConfig.DEFAULT_VP8_BATCH,
+            vp8Tracks = transportOptions["vp8-tracks"]
+                ?.toIntOrNull()
+                ?: transportOptions["tracks"]?.toIntOrNull()
+                ?: LocationConfig.DEFAULT_VP8_TRACKS
         ).normalized()
 
         return location
