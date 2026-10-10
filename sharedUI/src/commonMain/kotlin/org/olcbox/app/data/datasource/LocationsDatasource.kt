@@ -1233,8 +1233,7 @@ class LocationsRepositoryImpl(
                 ?: transportOptions["batch"]
                 ?: LocationConfig.DEFAULT_VP8_BATCH,
             vp8Tracks = transportOptions["vp8-tracks"]
-                ?.toIntOrNull()
-                ?: transportOptions["tracks"]?.toIntOrNull()
+                ?: transportOptions["tracks"]
                 ?: LocationConfig.DEFAULT_VP8_TRACKS
         ).normalized()
 
