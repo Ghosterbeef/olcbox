@@ -1198,7 +1198,7 @@ private fun SharedStatusMetric(
             overflow = TextOverflow.Ellipsis
         )
         Text(
-            label = label,
+            text = label,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.sp,
             maxLines = 1

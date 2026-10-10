@@ -35,6 +35,22 @@ class AppStringsTest {
     }
 
     @Test
+    fun testNewDescriptionsAndLabelsArePresent() {
+        assertEquals("Settings", EnAppStrings.settings)
+        assertEquals("Настройки", RuAppStrings.settings)
+        assertEquals("Selected location", EnAppStrings.selectedLocationDescription)
+        assertEquals("Выбранная локация", RuAppStrings.selectedLocationDescription)
+        assertEquals("Connectivity Check", EnAppStrings.connectivityCheck)
+        assertEquals("Проверка доступности", RuAppStrings.connectivityCheck)
+        assertEquals("Start Icon", EnAppStrings.startIconDescription)
+        assertEquals("Значок запуска", RuAppStrings.startIconDescription)
+        assertEquals("Active", EnAppStrings.activeDescription)
+        assertEquals("Активно", RuAppStrings.activeDescription)
+        assertEquals("Inactive", EnAppStrings.inactiveDescription)
+        assertEquals("Неактивно", RuAppStrings.inactiveDescription)
+    }
+
+    @Test
     fun testRussianPluralization() {
         assertEquals("1 подписка", RuAppStrings.subscriptionsCount(1))
         assertEquals("2 подписки", RuAppStrings.subscriptionsCount(2))

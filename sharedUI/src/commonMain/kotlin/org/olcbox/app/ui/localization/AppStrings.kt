@@ -22,8 +22,12 @@ interface AppStrings {
     val start: String
     val stop: String
     val setup: String
+    val startIconDescription: String
     val relayActive: String
     val relayInactive: String
+    val activeDescription: String
+    val inactiveDescription: String
+    val connectivityCheck: String
     val statusConnected: String
     val statusConnecting: String
     val statusDisconnected: String
@@ -34,6 +38,8 @@ interface AppStrings {
     val historyContentDescription: String
     val splitTunnelingContentDescription: String
     val addConfigurationContentDescription: String
+    val settings: String
+    val selectedLocationDescription: String
 
     // Add Sheet
     val addConnection: String
@@ -260,8 +266,12 @@ object EnAppStrings : AppStrings {
     override val start = "START"
     override val stop = "STOP"
     override val setup = "SETUP"
+    override val startIconDescription = "Start Icon"
     override val relayActive = "Relay Active"
     override val relayInactive = "Relay Inactive"
+    override val activeDescription = "Active"
+    override val inactiveDescription = "Inactive"
+    override val connectivityCheck = "Connectivity Check"
     override val statusConnected = "Connected"
     override val statusConnecting = "Connecting..."
     override val statusDisconnected = "Disconnected"
@@ -271,6 +281,8 @@ object EnAppStrings : AppStrings {
     override val historyContentDescription = "History"
     override val splitTunnelingContentDescription = "Split tunneling"
     override val addConfigurationContentDescription = "Add configuration"
+    override val settings = "Settings"
+    override val selectedLocationDescription = "Selected location"
 
     override val addConnection = "Add connection"
     override val addConnectionSubtitle = "Subscription or custom location"
@@ -534,8 +546,12 @@ object RuAppStrings : AppStrings {
     override val start = "СТАРТ"
     override val stop = "СТОП"
     override val setup = "НАСТРОЙКА"
+    override val startIconDescription = "Значок запуска"
     override val relayActive = "Реле активно"
     override val relayInactive = "Реле неактивно"
+    override val activeDescription = "Активно"
+    override val inactiveDescription = "Неактивно"
+    override val connectivityCheck = "Проверка доступности"
     override val statusConnected = "Подключено"
     override val statusConnecting = "Подключение..."
     override val statusDisconnected = "Отключено"
@@ -545,6 +561,8 @@ object RuAppStrings : AppStrings {
     override val historyContentDescription = "Логи"
     override val splitTunnelingContentDescription = "Раздельное туннелирование"
     override val addConfigurationContentDescription = "Добавить"
+    override val settings = "Настройки"
+    override val selectedLocationDescription = "Выбранная локация"
 
     override val addConnection = "Новое подключение"
     override val addConnectionSubtitle = "Подписка или своя локация"
