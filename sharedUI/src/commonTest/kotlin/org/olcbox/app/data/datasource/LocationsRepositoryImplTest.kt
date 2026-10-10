@@ -1168,7 +1168,8 @@ class LocationsRepositoryImplTest {
             bypassProvider = LocationConfig.PROVIDER_WB_STREAM,
             transport = LocationConfig.TRANSPORT_VP8CHANNEL,
             vp8Fps = 48,
-            vp8Batch = 32
+            vp8Batch = 32,
+            vp8Tracks = 4
         )
 
         val shared = ConfigShareService.olcRtcUri(config)
@@ -1180,6 +1181,7 @@ class LocationsRepositoryImplTest {
         assertNotNull(imported)
         assertEquals(48, imported.locations.single().location.vp8Fps)
         assertEquals(32, imported.locations.single().location.vp8Batch)
+        assertEquals(4, imported.locations.single().location.vp8Tracks)
     }
 
     @Test
