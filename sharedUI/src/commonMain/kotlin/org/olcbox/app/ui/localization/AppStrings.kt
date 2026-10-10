@@ -128,6 +128,9 @@ interface AppStrings {
     val subscriptionRefreshSetToAuto: String
     val subscriptionRefreshRateSaved: String
     fun subscriptionDeletedSummary(removedLocations: Int): String
+    val socks5ProxySaved: String
+    val passwordRegenerated: String
+    val connectionModeSaved: String
     val qrImported: String
 
     // Application Settings Sheet
@@ -365,6 +368,9 @@ object EnAppStrings : AppStrings {
     override val subscriptionRefreshSetToAuto = "Subscription refresh set to Auto"
     override val subscriptionRefreshRateSaved = "Subscription refresh rate saved"
     override fun subscriptionDeletedSummary(removedLocations: Int) = "Subscription deleted · $removedLocations locations removed"
+    override val socks5ProxySaved = "SOCKS proxy saved"
+    override val passwordRegenerated = "Password regenerated"
+    override val connectionModeSaved = "Connection mode saved"
     override val qrImported = "QR imported"
 
     override val applicationSettingsTitle = "Application Settings"
@@ -646,6 +652,9 @@ object RuAppStrings : AppStrings {
     override val subscriptionRefreshRateSaved = "Частота обновления сохранена"
     override fun subscriptionDeletedSummary(removedLocations: Int) =
         "Подписка удалена · удалено $removedLocations ${ruPlural(removedLocations, "локация", "локации", "локаций")}"
+    override val socks5ProxySaved = "SOCKS-прокси сохранён"
+    override val passwordRegenerated = "Пароль обновлён"
+    override val connectionModeSaved = "Режим подключения сохранён"
     override val qrImported = "QR импортирован"
 
     override val applicationSettingsTitle = "Настройки приложения"
