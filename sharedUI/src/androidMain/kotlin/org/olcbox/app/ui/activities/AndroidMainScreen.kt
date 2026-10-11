@@ -78,6 +78,7 @@ fun AndroidMainScreen(
     val proxySettings by vpnManager.proxySettings.collectAsState()
     val splitTunnelSettings by vpnManager.splitTunnelSettings.collectAsState()
     val dynamicThemeEnabled by vpnManager.dynamicThemeEnabled.collectAsState()
+    val showNotificationSpeed by vpnManager.showNotificationSpeed.collectAsState()
     val installedApps by vpnManager.installedApps.collectAsState()
     val homeState by viewModel.state.collectAsState()
     val logs by viewModel.logs.collectAsState()
@@ -432,6 +433,7 @@ fun AndroidMainScreen(
             installedApps = installedApps,
             logs = logs,
             dynamicThemeEnabled = dynamicThemeEnabled,
+            showNotificationSpeed = showNotificationSpeed,
             updateSettings = updateSettings,
             updateStatusText = updateStatusText,
             updateDownloadProgress = updateDownloadProgress,
@@ -512,6 +514,7 @@ fun AndroidMainScreen(
                 }
             },
             onDynamicThemeChanged = vpnManager::setDynamicThemeEnabled,
+            onShowNotificationSpeedChanged = vpnManager::setShowNotificationSpeed,
             onModeSelected = { mode ->
                 if (mode != connectionMode && homeState.isVpnConnected) {
                     val prepIntent = if (mode == AndroidConnectionMode.Tun) {

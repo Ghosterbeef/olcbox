@@ -136,6 +136,8 @@ interface AppStrings {
     val dynamicThemeTitle: String
     val dynamicThemeAndroidColors: String
     val dynamicThemeOlcboxColors: String
+    val showSpeedInNotification: String
+    val showSpeedInNotificationSubtitle: String
     val connectionSettings: String
     val connectionSettingsSubtitle: String
     val connectionSettingsAndroidSubtitle: String
@@ -245,6 +247,7 @@ interface AppStrings {
     fun friendlySchedule(ms: Long): String
     fun relativeTime(ms: Long, nowMs: Long): String
     fun formatBytes(bytes: Long): String
+    fun formatSpeed(bytesPerSec: Long): String
 
     // Split Tunneling & Routing
     val splitTunneling: String
@@ -458,6 +461,8 @@ object EnAppStrings : AppStrings {
     override val dynamicThemeTitle = "Dynamic Theme"
     override val dynamicThemeAndroidColors = "Using Android system colors"
     override val dynamicThemeOlcboxColors = "Using Olcbox colors"
+    override val showSpeedInNotification = "Speed in notification"
+    override val showSpeedInNotificationSubtitle = "Show current upload and download speed in status bar"
     override val connectionSettings = "Connection Settings"
     override val connectionSettingsSubtitle = "Mode and SOCKS5 proxy"
     override val connectionSettingsAndroidSubtitle = "Mode, SOCKS5 proxy, and app routing"
@@ -611,6 +616,17 @@ object EnAppStrings : AppStrings {
             "${(mb * 10).toInt() / 10.0} MB"
         } else {
             "${bytes / 1024L} KB"
+        }
+    }
+
+    override fun formatSpeed(bytesPerSec: Long): String {
+        val mb = bytesPerSec.toDouble() / (1024.0 * 1024.0)
+        return if (mb >= 1.0) {
+            "${(mb * 10).toInt() / 10.0} MB/s"
+        } else if (bytesPerSec >= 1024L) {
+            "${bytesPerSec / 1024L} KB/s"
+        } else {
+            "$bytesPerSec B/s"
         }
     }
 
@@ -824,6 +840,8 @@ object RuAppStrings : AppStrings {
     override val dynamicThemeTitle = "Динамическая тема"
     override val dynamicThemeAndroidColors = "Цвета системы Android"
     override val dynamicThemeOlcboxColors = "Цвета темы Olcbox"
+    override val showSpeedInNotification = "Скорость в уведомлении"
+    override val showSpeedInNotificationSubtitle = "Отображать текущую скорость передачи данных в шторке"
     override val connectionSettings = "Настройки подключения"
     override val connectionSettingsSubtitle = "Режим и SOCKS5-прокси"
     override val connectionSettingsAndroidSubtitle = "Режим, SOCKS5-прокси и маршрутизация"
@@ -984,6 +1002,17 @@ object RuAppStrings : AppStrings {
             "${(mb * 10).toInt() / 10.0} МБ"
         } else {
             "${bytes / 1024L} КБ"
+        }
+    }
+
+    override fun formatSpeed(bytesPerSec: Long): String {
+        val mb = bytesPerSec.toDouble() / (1024.0 * 1024.0)
+        return if (mb >= 1.0) {
+            "${(mb * 10).toInt() / 10.0} МБ/с"
+        } else if (bytesPerSec >= 1024L) {
+            "${bytesPerSec / 1024L} КБ/с"
+        } else {
+            "$bytesPerSec Б/с"
         }
     }
 

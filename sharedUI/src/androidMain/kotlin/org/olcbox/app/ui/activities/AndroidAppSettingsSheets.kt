@@ -43,6 +43,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.History
@@ -134,6 +135,7 @@ internal fun AppSettingsSheet(
     installedApps: List<AndroidInstalledApp>,
     logs: List<String>,
     dynamicThemeEnabled: Boolean,
+    showNotificationSpeed: Boolean = false,
     updateSettings: AppUpdateSettings,
     updateStatusText: String?,
     updateDownloadProgress: Float?,
@@ -151,6 +153,7 @@ internal fun AppSettingsSheet(
     onSubscriptionRefreshIntervalChanged: (String, Long?) -> Unit,
     onSubscriptionDeleteClick: (String) -> Unit,
     onDynamicThemeChanged: (Boolean) -> Unit,
+    onShowNotificationSpeedChanged: (Boolean) -> Unit = {},
     onLanguageSelected: (AppLanguage) -> Unit = { AppLocalization.setLanguage(it) },
     onModeSelected: (AndroidConnectionMode) -> Unit,
     onProxySettingsSaved: (String, String, String, Int) -> Unit,
@@ -238,10 +241,12 @@ internal fun AppSettingsSheet(
                     strings = strings,
                     selectedMode = selectedMode,
                     dynamicThemeEnabled = dynamicThemeEnabled,
+                    showNotificationSpeed = showNotificationSpeed,
                     updateSettings = updateSettings,
                     subscriptionsCount = subscriptions.size,
                     enabled = enabled,
                     onDynamicThemeChanged = onDynamicThemeChanged,
+                    onShowNotificationSpeedChanged = onShowNotificationSpeedChanged,
                     onLanguageClick = { route = AppSettingsRoute.Language },
                     onConnectionSettingsClick = { route = AppSettingsRoute.ConnectionSettings },
                     onSubscriptionsSharingClick = { route = AppSettingsRoute.SubscriptionsSharing },
@@ -393,10 +398,12 @@ private fun AppSettingsHubContent(
     strings: AppStrings,
     selectedMode: AndroidConnectionMode,
     dynamicThemeEnabled: Boolean,
+    showNotificationSpeed: Boolean,
     updateSettings: AppUpdateSettings,
     subscriptionsCount: Int,
     enabled: Boolean,
     onDynamicThemeChanged: (Boolean) -> Unit,
+    onShowNotificationSpeedChanged: (Boolean) -> Unit,
     onLanguageClick: () -> Unit,
     onConnectionSettingsClick: () -> Unit,
     onSubscriptionsSharingClick: () -> Unit,
@@ -429,6 +436,15 @@ private fun AppSettingsHubContent(
             checked = dynamicThemeEnabled,
             enabled = true,
             onCheckedChange = onDynamicThemeChanged
+        )
+
+        SettingsSwitchRow(
+            title = strings.showSpeedInNotification,
+            value = strings.showSpeedInNotificationSubtitle,
+            icon = Icons.Outlined.Bolt,
+            checked = showNotificationSpeed,
+            enabled = true,
+            onCheckedChange = onShowNotificationSpeedChanged
         )
 
         SettingsNavigationRow(

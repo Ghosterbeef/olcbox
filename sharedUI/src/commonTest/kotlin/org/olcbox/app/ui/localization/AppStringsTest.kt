@@ -88,4 +88,22 @@ class AppStringsTest {
         assertEquals("Готово к сканированию", RuAppStrings.readyToScan)
         assertEquals("Защита подключения", RuAppStrings.protectingYourConnection)
     }
+
+    @Test
+    fun testFormatSpeed() {
+        assertEquals("500 B/s", EnAppStrings.formatSpeed(500L))
+        assertEquals("500 Б/с", RuAppStrings.formatSpeed(500L))
+
+        assertEquals("50 KB/s", EnAppStrings.formatSpeed(50 * 1024L))
+        assertEquals("50 КБ/с", RuAppStrings.formatSpeed(50 * 1024L))
+
+        assertEquals("1.5 MB/s", EnAppStrings.formatSpeed((1.5 * 1024 * 1024).toLong()))
+        assertEquals("1.5 МБ/с", RuAppStrings.formatSpeed((1.5 * 1024 * 1024).toLong()))
+    }
+
+    @Test
+    fun testNotificationSpeedStrings() {
+        assertEquals("Speed in notification", EnAppStrings.showSpeedInNotification)
+        assertEquals("Скорость в уведомлении", RuAppStrings.showSpeedInNotification)
+    }
 }

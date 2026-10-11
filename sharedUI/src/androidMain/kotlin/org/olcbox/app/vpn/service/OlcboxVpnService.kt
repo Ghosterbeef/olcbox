@@ -10,10 +10,13 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.net.TrafficStats
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
+import android.os.Process
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -57,6 +60,7 @@ import org.olcbox.app.vpn.data.KEY_ANDROID_SPLIT_TUNNEL_PROXY_APPS
 import org.olcbox.app.vpn.data.KEY_ANDROID_SOCKS_HOST
 import org.olcbox.app.vpn.data.KEY_ANDROID_SOCKS_PASSWORD
 import org.olcbox.app.vpn.data.KEY_ANDROID_SOCKS_PORT
+import org.olcbox.app.vpn.data.KEY_ANDROID_SHOW_NOTIFICATION_SPEED
 import org.olcbox.app.vpn.data.KEY_ANDROID_SOCKS_USERNAME
 import org.olcbox.app.vpn.data.vpnPrefDataStore
 import org.olcbox.app.ui.localization.AppLanguage
@@ -92,6 +96,9 @@ class OlcboxVpnService : VpnService() {
 
     private var startupJob: Job? = null
     private var watchdogJob: Job? = null
+    private var speedTrackerJob: Job? = null
+    @Volatile
+    private var showNotificationSpeed = false
     private var cleanupJob: Job? = null
     private var networkLossJob: Job? = null
     private var recoveryJob: Job? = null
@@ -254,8 +261,17 @@ class OlcboxVpnService : VpnService() {
     override fun onCreate() {
         super.onCreate()
         scope.launch {
-            vpnPrefDataStore.data.first()[KEY_APP_LANGUAGE]?.let { langCode ->
-                AppLocalization.userSelectedLanguage = AppLanguage.fromCode(langCode)
+            vpnPrefDataStore.data.collect { prefs ->
+                prefs[KEY_APP_LANGUAGE]?.let { langCode ->
+                    AppLocalization.userSelectedLanguage = AppLanguage.fromCode(langCode)
+                }
+                val speedEnabled = prefs[KEY_ANDROID_SHOW_NOTIFICATION_SPEED] == true
+                if (showNotificationSpeed != speedEnabled) {
+                    showNotificationSpeed = speedEnabled
+                    if (!speedEnabled && OlcboxVpnState.status.value is VpnStatus.Connected) {
+                        updateNotification(connectedNotificationText())
+                    }
+                }
             }
         }
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -405,6 +421,7 @@ class OlcboxVpnService : VpnService() {
         val hadPendingStartup = previousStartupJob?.isActive == true
         previousStartupJob?.cancel()
         watchdogJob?.cancel()
+        stopSpeedTracker()
         networkLossJob?.cancel()
         recoveryJob?.cancel()
         recoveryJob = null
@@ -852,6 +869,7 @@ class OlcboxVpnService : VpnService() {
         watchdogJob?.cancel()
         watchdogTunStats = null
         watchdogStalledSamples = 0
+        startSpeedTracker()
         val mode = connectionMode
         watchdogJob = scope.launch {
             while (isActive && OlcboxVpnState.status.value is VpnStatus.Connected) {
@@ -924,6 +942,7 @@ class OlcboxVpnService : VpnService() {
         setStatus(VpnStatus.Stopping)
         startupJob?.cancel()
         watchdogJob?.cancel()
+        stopSpeedTracker()
         networkLossJob?.cancel()
         recoveryJob?.cancel()
         recoveryJob = null
@@ -1169,6 +1188,57 @@ class OlcboxVpnService : VpnService() {
         return watchdogStalledSamples >= WATCHDOG_STALLED_SAMPLE_LIMIT
     }
 
+    private fun startSpeedTracker() {
+        speedTrackerJob?.cancel()
+        speedTrackerJob = scope.launch {
+            var lastTraffic: Pair<Long, Long>? = null
+            var lastSampleTime = SystemClock.elapsedRealtime()
+
+            while (isActive && OlcboxVpnState.status.value is VpnStatus.Connected) {
+                delay(1000L)
+                val currentTraffic = readCurrentTraffic()
+                val now = SystemClock.elapsedRealtime()
+                val deltaMs = (now - lastSampleTime).coerceAtLeast(1L)
+                lastSampleTime = now
+
+                if (currentTraffic != null && lastTraffic != null) {
+                    val rxDelta = (currentTraffic.first - lastTraffic.first).coerceAtLeast(0L)
+                    val txDelta = (currentTraffic.second - lastTraffic.second).coerceAtLeast(0L)
+                    val rxSpeed = (rxDelta * 1000L) / deltaMs
+                    val txSpeed = (txDelta * 1000L) / deltaMs
+
+                    if (showNotificationSpeed && OlcboxVpnState.status.value is VpnStatus.Connected) {
+                        val speedText = "↓ ${AppLocalization.strings.formatSpeed(rxSpeed)} · ↑ ${AppLocalization.strings.formatSpeed(txSpeed)}"
+                        updateNotification("${connectedNotificationText()} · $speedText")
+                    }
+                }
+
+                if (currentTraffic != null) {
+                    lastTraffic = currentTraffic
+                }
+            }
+        }
+    }
+
+    private fun stopSpeedTracker() {
+        speedTrackerJob?.cancel()
+        speedTrackerJob = null
+    }
+
+    private fun readCurrentTraffic(): Pair<Long, Long>? {
+        val tunStats = if (connectionMode == AndroidConnectionMode.Tun) readTun2SocksStats() else null
+        if (tunStats != null) {
+            return tunStats.rxBytes to tunStats.txBytes
+        }
+        val uid = Process.myUid()
+        val rx = TrafficStats.getUidRxBytes(uid)
+        val tx = TrafficStats.getUidTxBytes(uid)
+        if (rx == TrafficStats.UNSUPPORTED.toLong() || tx == TrafficStats.UNSUPPORTED.toLong()) {
+            return null
+        }
+        return rx to tx
+    }
+
     private fun readTun2SocksStats(): Tun2SocksStats? {
         if (!nativeLibrariesLoaded || !tun2socksStarted) return null
         return runCatching {
@@ -1202,6 +1272,7 @@ class OlcboxVpnService : VpnService() {
 
         recoveryJob?.cancel()
         if (setReconnectingImmediately && status is VpnStatus.Connected) {
+            stopSpeedTracker()
             setStatus(VpnStatus.Reconnecting)
             updateNotification(AppLocalization.strings.reconnecting)
         }
@@ -1477,6 +1548,7 @@ class OlcboxVpnService : VpnService() {
             .setContentText(status)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setOngoing(true)
+            .setOnlyAlertOnce(true)
             .setContentIntent(getAppPendingIntent())
             .addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,

@@ -32,6 +32,7 @@ import org.olcbox.app.data.identity.PersistentDeviceIdentityProvider
 import org.olcbox.app.data.repository.SubscriptionFetchProxy
 import org.olcbox.app.vpn.data.KEY_ANDROID_CONNECTION_MODE
 import org.olcbox.app.vpn.data.KEY_ANDROID_DYNAMIC_THEME
+import org.olcbox.app.vpn.data.KEY_ANDROID_SHOW_NOTIFICATION_SPEED
 import org.olcbox.app.vpn.data.KEY_ANDROID_SPLIT_TUNNEL_BYPASS_APPS
 import org.olcbox.app.vpn.data.KEY_ANDROID_SPLIT_TUNNEL_MODE
 import org.olcbox.app.vpn.data.KEY_ANDROID_SPLIT_TUNNEL_PROXY_APPS
@@ -52,6 +53,7 @@ class AndroidVpnManager(private val context: Context) : VpnManager {
     private val _proxySettings = MutableStateFlow(AndroidSocksProxySettings())
     private val _splitTunnelSettings = MutableStateFlow(AndroidSplitTunnelSettings())
     private val _dynamicThemeEnabled = MutableStateFlow(true)
+    private val _showNotificationSpeed = MutableStateFlow(false)
     private val _installedApps = MutableStateFlow<List<AndroidInstalledApp>>(emptyList())
     private val deviceIdentityProvider = PersistentDeviceIdentityProvider(
         LocationsDataSourceImpl(appContext)
@@ -64,6 +66,7 @@ class AndroidVpnManager(private val context: Context) : VpnManager {
     val proxySettings: StateFlow<AndroidSocksProxySettings> = _proxySettings.asStateFlow()
     val splitTunnelSettings: StateFlow<AndroidSplitTunnelSettings> = _splitTunnelSettings.asStateFlow()
     val dynamicThemeEnabled: StateFlow<Boolean> = _dynamicThemeEnabled.asStateFlow()
+    val showNotificationSpeed: StateFlow<Boolean> = _showNotificationSpeed.asStateFlow()
     val installedApps: StateFlow<List<AndroidInstalledApp>> = _installedApps.asStateFlow()
 
     init {
@@ -105,7 +108,8 @@ class AndroidVpnManager(private val context: Context) : VpnManager {
                         mode = mode,
                         proxy = proxy,
                         splitTunnel = splitTunnel,
-                        dynamicThemeEnabled = preferences[KEY_ANDROID_DYNAMIC_THEME] != false
+                        dynamicThemeEnabled = preferences[KEY_ANDROID_DYNAMIC_THEME] != false,
+                        showNotificationSpeed = preferences[KEY_ANDROID_SHOW_NOTIFICATION_SPEED] == true
                     )
                 }
                 .collect { settings ->
@@ -113,6 +117,7 @@ class AndroidVpnManager(private val context: Context) : VpnManager {
                     _proxySettings.value = settings.proxy
                     _splitTunnelSettings.value = settings.splitTunnel
                     _dynamicThemeEnabled.value = settings.dynamicThemeEnabled
+                    _showNotificationSpeed.value = settings.showNotificationSpeed
                 }
         }
         refreshInstalledApps()
@@ -142,6 +147,15 @@ class AndroidVpnManager(private val context: Context) : VpnManager {
         scope.launch {
             appContext.vpnPrefDataStore.edit { preferences ->
                 preferences[KEY_ANDROID_DYNAMIC_THEME] = enabled
+            }
+        }
+    }
+
+    fun setShowNotificationSpeed(enabled: Boolean) {
+        _showNotificationSpeed.value = enabled
+        scope.launch {
+            appContext.vpnPrefDataStore.edit { preferences ->
+                preferences[KEY_ANDROID_SHOW_NOTIFICATION_SPEED] = enabled
             }
         }
     }
@@ -395,7 +409,8 @@ class AndroidVpnManager(private val context: Context) : VpnManager {
         val mode: AndroidConnectionMode,
         val proxy: AndroidSocksProxySettings,
         val splitTunnel: AndroidSplitTunnelSettings,
-        val dynamicThemeEnabled: Boolean
+        val dynamicThemeEnabled: Boolean,
+        val showNotificationSpeed: Boolean
     )
 
     private companion object {
