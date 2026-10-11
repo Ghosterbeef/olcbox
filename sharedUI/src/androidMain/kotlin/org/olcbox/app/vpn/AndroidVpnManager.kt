@@ -17,7 +17,11 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import org.olcbox.app.ui.localization.AppLanguage
+import org.olcbox.app.ui.localization.AppLocalization
+import org.olcbox.app.vpn.data.KEY_APP_LANGUAGE
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -63,6 +67,18 @@ class AndroidVpnManager(private val context: Context) : VpnManager {
     val installedApps: StateFlow<List<AndroidInstalledApp>> = _installedApps.asStateFlow()
 
     init {
+        AppLocalization.onLanguageChanged = { language ->
+            scope.launch {
+                appContext.vpnPrefDataStore.edit { preferences ->
+                    preferences[KEY_APP_LANGUAGE] = language.code
+                }
+            }
+        }
+        scope.launch {
+            appContext.vpnPrefDataStore.data.first()[KEY_APP_LANGUAGE]?.let { langCode ->
+                AppLocalization.userSelectedLanguage = AppLanguage.fromCode(langCode)
+            }
+        }
         scope.launch {
             ensureProxySettings()
             appContext.vpnPrefDataStore.data
@@ -115,6 +131,10 @@ class AndroidVpnManager(private val context: Context) : VpnManager {
                 preferences[KEY_ANDROID_CONNECTION_MODE] = mode.value
             }
         }
+    }
+
+    fun setAppLanguage(language: AppLanguage) {
+        AppLocalization.setLanguage(language)
     }
 
     fun setDynamicThemeEnabled(enabled: Boolean) {

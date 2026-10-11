@@ -43,7 +43,7 @@ class AppStringsTest {
         assertEquals("Connectivity Check", EnAppStrings.connectivityCheck)
         assertEquals("Проверка доступности", RuAppStrings.connectivityCheck)
         assertEquals("Start Icon", EnAppStrings.startIconDescription)
-        assertEquals("Значок запуска", RuAppStrings.startIconDescription)
+        assertEquals("Кнопка подключения", RuAppStrings.startIconDescription)
         assertEquals("Active", EnAppStrings.activeDescription)
         assertEquals("Активно", RuAppStrings.activeDescription)
         assertEquals("Inactive", EnAppStrings.inactiveDescription)
@@ -61,11 +61,31 @@ class AppStringsTest {
         assertEquals("1 локация", RuAppStrings.locationsCount(1))
         assertEquals("3 локации", RuAppStrings.locationsCount(3))
         assertEquals("10 локаций", RuAppStrings.locationsCount(10))
+
+        assertEquals("1 приложение", RuAppStrings.appsCount(1))
+        assertEquals("3 приложения", RuAppStrings.appsCount(3))
+        assertEquals("10 приложений", RuAppStrings.appsCount(10))
     }
 
     @Test
     fun testLanguageSelection() {
         assertEquals(RuAppStrings, appStringsFor(AppLanguage.Russian))
         assertEquals(EnAppStrings, appStringsFor(AppLanguage.English))
+        assertEquals("Русский", AppLanguage.Russian.title(RuAppStrings))
+        assertEquals("English", AppLanguage.English.title(EnAppStrings))
+    }
+
+    @Test
+    fun testNaturalRussianTranslations() {
+        assertEquals("Подключение активно", RuAppStrings.relayActive)
+        assertEquals("Подключение отключено", RuAppStrings.relayInactive)
+        assertEquals("Подписка актуальна", RuAppStrings.subscriptionAlreadyUpToDate)
+        assertEquals("Учётные данные", RuAppStrings.credentials)
+        assertEquals("Перезапустит активное подключение", RuAppStrings.savingRestartsActiveConnection)
+        assertEquals("Не обновлялось", RuAppStrings.notYet)
+        assertEquals("В доступе к камере отказано", RuAppStrings.cameraPermissionDenied)
+        assertEquals("Камера недоступна", RuAppStrings.cameraUnavailable)
+        assertEquals("Готово к сканированию", RuAppStrings.readyToScan)
+        assertEquals("Защита подключения", RuAppStrings.protectingYourConnection)
     }
 }

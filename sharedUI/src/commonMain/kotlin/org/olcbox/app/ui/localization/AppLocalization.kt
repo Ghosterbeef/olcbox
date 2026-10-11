@@ -12,6 +12,12 @@ val LocalAppLanguage = staticCompositionLocalOf<AppLanguage> { AppLanguage.Syste
 
 object AppLocalization {
     var userSelectedLanguage: AppLanguage by mutableStateOf(AppLanguage.System)
+    var onLanguageChanged: ((AppLanguage) -> Unit)? = null
+
+    fun setLanguage(language: AppLanguage) {
+        userSelectedLanguage = language
+        onLanguageChanged?.invoke(language)
+    }
 
     val currentLanguage: AppLanguage
         get() = userSelectedLanguage

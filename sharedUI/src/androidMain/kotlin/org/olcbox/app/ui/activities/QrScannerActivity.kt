@@ -62,6 +62,8 @@ import com.google.zxing.NotFoundException
 import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 import org.olcbox.app.ui.theme.AppTheme
+import org.olcbox.app.ui.localization.AppLocalization
+import org.olcbox.app.ui.localization.LocalAppStrings
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -90,7 +92,7 @@ class QrScannerActivity : ComponentActivity() {
             hasCameraPermission = true
             maybeStartCamera()
         } else {
-            Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, AppLocalization.strings.cameraPermissionDenied, Toast.LENGTH_SHORT).show()
             finish()
         }
     }
@@ -136,7 +138,7 @@ class QrScannerActivity : ComponentActivity() {
                 val provider = runCatching { cameraProviderFuture.get() }
                     .getOrElse {
                         cameraStarted = false
-                        Toast.makeText(this, "Camera unavailable", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, AppLocalization.strings.cameraUnavailable, Toast.LENGTH_SHORT).show()
                         finish()
                         return@addListener
                     }
@@ -164,7 +166,7 @@ class QrScannerActivity : ComponentActivity() {
                     )
                 }.onFailure {
                     cameraStarted = false
-                    Toast.makeText(this, "Camera unavailable", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, AppLocalization.strings.cameraUnavailable, Toast.LENGTH_SHORT).show()
                     finish()
                 }
             },
@@ -311,16 +313,17 @@ private fun QrScannerScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QrScannerTopBar(onClose: () -> Unit) {
+    val strings = LocalAppStrings.current
     CenterAlignedTopAppBar(
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "Scan QR",
+                    text = strings.scanQrCode,
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "subscription or location URI",
+                    text = strings.subscriptionOrLocationUri,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -330,7 +333,7 @@ private fun QrScannerTopBar(onClose: () -> Unit) {
             IconButton(onClick = onClose) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = "Close scanner",
+                    contentDescription = strings.closeScanner,
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -420,15 +423,16 @@ private fun QrScannerStatusPanel(modifier: Modifier = Modifier) {
                     }
                 }
 
+                val strings = LocalAppStrings.current
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Ready to scan",
+                        text = strings.readyToScan,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Subscription or location URI",
+                        text = strings.subscriptionOrLocationUri,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

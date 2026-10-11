@@ -97,6 +97,9 @@ import org.olcbox.app.ui.features.locations.LocationItem
 import org.olcbox.app.ui.features.locations.LocationViewModel
 import org.olcbox.app.ui.navigation.AppScreen
 import org.olcbox.app.ui.theme.AppTheme
+import java.nio.file.Files
+import org.olcbox.app.ui.localization.AppLanguage
+import org.olcbox.app.ui.localization.AppLocalization
 import org.olcbox.app.ui.localization.AppStrings
 import org.olcbox.app.ui.localization.LocalAppStrings
 import org.olcbox.app.update.AppUpdateInfo
@@ -256,7 +259,21 @@ private fun runDesktopApp(args: Array<String>, deepLinks: DesktopDeepLinks) = ap
         }
     }
 
+    val langFile = remember { org.olcbox.app.desktop.DesktopPaths.appDataDir().resolve("language.txt") }
+
     LaunchedEffect(Unit) {
+        val savedLang = runCatching {
+            if (Files.exists(langFile)) Files.readString(langFile).trim() else null
+        }.getOrNull()
+        if (savedLang != null) {
+            AppLocalization.userSelectedLanguage = AppLanguage.fromCode(savedLang)
+        }
+        AppLocalization.onLanguageChanged = { lang ->
+            runCatching {
+                Files.createDirectories(langFile.parent)
+                Files.writeString(langFile, lang.code)
+            }
+        }
         val loaded = dependencies.updateSettingsStore.load()
         updateSettings = loaded
         dependencies.vpnManager.updateSocksProxySettings(dependencies.socksProxySettingsStore.load())
@@ -426,8 +443,8 @@ private fun runDesktopApp(args: Array<String>, deepLinks: DesktopDeepLinks) = ap
                         routingModeOptions = DesktopRoutingMode.availableForCurrentPlatform().map { mode ->
                             ApplicationRoutingModeOption(
                                 id = mode.name,
-                                title = mode.displayName(),
-                                subtitle = mode.description()
+                                title = mode.displayName(strings),
+                                subtitle = mode.description(strings)
                             )
                         },
                         selectedRoutingModeId = socksProxySettings.routingMode.name,

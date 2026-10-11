@@ -355,7 +355,7 @@ private fun SharedSettingsHubContent(
 
         SharedNavigationRow(
             title = strings.languageSetting,
-            value = AppLocalization.currentLanguage.displayName,
+            value = AppLocalization.currentLanguage.title(strings),
             icon = Icons.Outlined.Language,
             onClick = onLanguageClick
         )
@@ -398,7 +398,7 @@ private fun SharedLanguageSettingsContent(
     ) {
         SharedDetailHeader(
             title = strings.languageSetting,
-            subtitle = current.displayName,
+            subtitle = strings.languageSettingSubtitle,
             onBack = onBack,
             backContentDescription = strings.back
         )
@@ -410,14 +410,10 @@ private fun SharedLanguageSettingsContent(
                 SharedSelectableSettingsCard(
                     selected = lang == current,
                     icon = Icons.Outlined.Language,
-                    title = lang.displayName,
-                    subtitle = when (lang) {
-                        AppLanguage.System -> strings.auto
-                        AppLanguage.Russian -> "Русский язык"
-                        AppLanguage.English -> "English language"
-                    },
+                    title = lang.title(strings),
+                    subtitle = lang.subtitle(strings),
                     onClick = {
-                        AppLocalization.userSelectedLanguage = lang
+                        AppLocalization.setLanguage(lang)
                     }
                 )
             }

@@ -4,14 +4,14 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.Path
 
-internal enum class DesktopOs {
+enum class DesktopOs {
     MacOS,
     Windows,
     Linux,
     Other
 }
 
-internal object DesktopPaths {
+object DesktopPaths {
     val os: DesktopOs
         get() {
             val name = System.getProperty("os.name").lowercase()

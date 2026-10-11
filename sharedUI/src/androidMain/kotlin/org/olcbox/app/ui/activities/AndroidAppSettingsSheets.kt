@@ -98,8 +98,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.olcbox.app.ui.localization.AppLanguage
+import org.olcbox.app.ui.localization.AppLocalization
+import org.olcbox.app.ui.localization.AppStrings
+import org.olcbox.app.ui.localization.LocalAppStrings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -145,6 +150,7 @@ internal fun AppSettingsSheet(
     onSubscriptionRefreshIntervalChanged: (String, Long?) -> Unit,
     onSubscriptionDeleteClick: (String) -> Unit,
     onDynamicThemeChanged: (Boolean) -> Unit,
+    onLanguageSelected: (AppLanguage) -> Unit = { AppLocalization.setLanguage(it) },
     onModeSelected: (AndroidConnectionMode) -> Unit,
     onProxySettingsSaved: (String, String, String, Int) -> Unit,
     onProxyPasswordRegenerated: () -> Unit,
@@ -152,6 +158,7 @@ internal fun AppSettingsSheet(
     onSplitTunnelAppToggled: (AndroidSplitTunnelList, String) -> Unit,
     onSplitTunnelAppsSelected: (AndroidSplitTunnelList, Set<String>) -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     var route by remember(initialRoute) { mutableStateOf(initialRoute.toRoute()) }
@@ -234,6 +241,7 @@ internal fun AppSettingsSheet(
                 )
 
                 AppSettingsRoute.ConnectionSettings -> ConnectionSettingsContent(
+                    strings = strings,
                     selectedMode = selectedMode,
                     proxySettings = proxySettings,
                     splitTunnelSettings = splitTunnelSettings,
@@ -245,6 +253,7 @@ internal fun AppSettingsSheet(
                 )
 
                 AppSettingsRoute.ConnectionMode -> ConnectionModeSettingsContent(
+                    strings = strings,
                     selectedMode = selectedMode,
                     enabled = enabled,
                     onBack = { route = AppSettingsRoute.ConnectionSettings },
@@ -252,6 +261,7 @@ internal fun AppSettingsSheet(
                 )
 
                 AppSettingsRoute.SocksProxy -> SocksProxySettingsContent(
+                    strings = strings,
                     proxySettings = proxySettings,
                     enabled = enabled,
                     isConnectionActive = isConnectionActive,
@@ -261,6 +271,7 @@ internal fun AppSettingsSheet(
                 )
 
                 AppSettingsRoute.SplitTunneling -> SplitTunnelingSettingsContent(
+                    strings = strings,
                     settings = splitTunnelSettings,
                     enabled = enabled,
                     isConnectionActive = isConnectionActive,
@@ -271,6 +282,7 @@ internal fun AppSettingsSheet(
                 )
 
                 is AppSettingsRoute.AppList -> SplitTunnelingAppListContent(
+                    strings = strings,
                     list = currentRoute.list,
                     settings = splitTunnelSettings,
                     installedApps = installedApps,
@@ -285,6 +297,7 @@ internal fun AppSettingsSheet(
                 )
 
                 AppSettingsRoute.ApplicationLogs -> ApplicationLogsSettingsContent(
+                    strings = strings,
                     logs = logs,
                     onBack = { route = AppSettingsRoute.Hub },
                     onSaveClick = onSaveLogsClick,
@@ -292,6 +305,7 @@ internal fun AppSettingsSheet(
                 )
 
                 AppSettingsRoute.SubscriptionsSharing -> SubscriptionsSharingSettingsContent(
+                    strings = strings,
                     subscriptions = subscriptions,
                     onBack = { route = AppSettingsRoute.Hub },
                     onCopyConfigClick = onCopyConfigClick,
@@ -335,6 +349,7 @@ internal fun AppSettingsSheet(
                 }
 
                 AppSettingsRoute.Updates -> UpdatesSettingsContent(
+                    strings = strings,
                     settings = updateSettings,
                     statusText = updateStatusText,
                     downloadProgress = updateDownloadProgress,
@@ -354,12 +369,14 @@ internal enum class AppSettingsInitialRoute {
 
 @Composable
 private fun AppSettingsHubContent(
+    strings: AppStrings,
     selectedMode: AndroidConnectionMode,
     dynamicThemeEnabled: Boolean,
     updateSettings: AppUpdateSettings,
     subscriptionsCount: Int,
     enabled: Boolean,
     onDynamicThemeChanged: (Boolean) -> Unit,
+    onLanguageClick: () -> Unit,
     onConnectionSettingsClick: () -> Unit,
     onSubscriptionsSharingClick: () -> Unit,
     onUpdatesClick: () -> Unit,
@@ -374,18 +391,18 @@ private fun AppSettingsHubContent(
     ) {
         SettingsSheetHeader(
             icon = Icons.Outlined.Settings,
-            title = "Application Settings",
-            subtitle = selectedMode.shortLabel()
+            title = strings.applicationSettingsTitle,
+            subtitle = selectedMode.shortLabel(strings)
         )
 
         Spacer(Modifier.height(8.dp))
 
         SettingsSwitchRow(
-            title = "Dynamic Theme",
+            title = strings.dynamicThemeTitle,
             value = if (dynamicThemeEnabled) {
-                "Using Android system colors"
+                strings.dynamicThemeAndroidColors
             } else {
-                "Using Olcbox colors"
+                strings.dynamicThemeOlcboxColors
             },
             icon = Icons.Outlined.Palette,
             checked = dynamicThemeEnabled,
@@ -394,32 +411,40 @@ private fun AppSettingsHubContent(
         )
 
         SettingsNavigationRow(
-            title = "Connection Settings",
-            value = "Mode, SOCKS5 proxy, and app routing",
+            title = strings.languageSetting,
+            value = AppLocalization.currentLanguage.title(strings),
+            icon = Icons.Outlined.Language,
+            enabled = true,
+            onClick = onLanguageClick
+        )
+
+        SettingsNavigationRow(
+            title = strings.connectionSettings,
+            value = strings.connectionSettingsAndroidSubtitle,
             icon = selectedMode.icon(),
             enabled = enabled,
             onClick = onConnectionSettingsClick
         )
 
         SettingsNavigationRow(
-            title = "Subscriptions & Sharing",
-            value = subscriptionsCount.subscriptionSummary(),
+            title = strings.subscriptionsAndSharing,
+            value = subscriptionsCount.subscriptionSummary(strings),
             icon = Icons.Outlined.Share,
             enabled = true,
             onClick = onSubscriptionsSharingClick
         )
 
         SettingsNavigationRow(
-            title = "Update Settings",
-            value = "Nightly · every ${updateSettings.intervalHours}h",
+            title = strings.updateSettings,
+            value = strings.updateSettingsSubtitle(updateSettings.intervalHours),
             icon = Icons.Outlined.Refresh,
             enabled = true,
             onClick = onUpdatesClick
         )
 
         SettingsNavigationRow(
-            title = "Application Logs",
-            value = "Diagnostics and export",
+            title = strings.applicationLogs,
+            value = strings.applicationLogsSubtitle,
             icon = Icons.Outlined.History,
             enabled = true,
             onClick = onApplicationLogsClick
@@ -442,7 +467,44 @@ private fun AppSettingsHubContent(
 }
 
 @Composable
+private fun LanguageSettingsContent(
+    strings: AppStrings,
+    currentLanguage: AppLanguage,
+    onBack: () -> Unit,
+    onLanguageSelected: (AppLanguage) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        SettingsDetailHeader(
+            title = strings.languageSetting,
+            subtitle = strings.languageSettingSubtitle,
+            onBack = onBack,
+            backContentDescription = strings.back
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        AppLanguage.entries.forEach { lang ->
+            SelectableSettingsCard(
+                selected = lang == currentLanguage,
+                enabled = true,
+                icon = Icons.Outlined.Language,
+                title = lang.title(strings),
+                subtitle = lang.subtitle(strings),
+                onClick = { onLanguageSelected(lang) }
+            )
+        }
+    }
+}
+
+@Composable
 private fun ConnectionSettingsContent(
+    strings: AppStrings,
     selectedMode: AndroidConnectionMode,
     proxySettings: AndroidSocksProxySettings,
     splitTunnelSettings: AndroidSplitTunnelSettings,
@@ -459,31 +521,32 @@ private fun ConnectionSettingsContent(
             .padding(top = 16.dp, bottom = 32.dp)
     ) {
         SettingsDetailHeader(
-            title = "Connection Settings",
-            subtitle = selectedMode.settingsSummary(),
-            onBack = onBack
+            title = strings.connectionSettings,
+            subtitle = selectedMode.settingsSummary(strings),
+            onBack = onBack,
+            backContentDescription = strings.back
         )
 
         Spacer(Modifier.height(20.dp))
 
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SettingsNavigationRow(
-                title = "Connection Mode",
-                value = selectedMode.settingsSummary(),
+                title = strings.connectionMode,
+                value = selectedMode.settingsSummary(strings),
                 icon = selectedMode.icon(),
                 enabled = enabled,
                 onClick = onConnectionModeClick
             )
             SettingsNavigationRow(
-                title = "SOCKS5 Proxy",
+                title = strings.socks5Proxy,
                 value = "${proxySettings.host}:${proxySettings.port}",
                 icon = Icons.Rounded.Public,
                 enabled = enabled,
                 onClick = onProxySettingsClick
             )
             SettingsNavigationRow(
-                title = "Split Tunneling",
-                value = splitTunnelSettings.settingsSummary(),
+                title = strings.splitTunneling,
+                value = splitTunnelSettings.settingsSummary(strings),
                 icon = Icons.Outlined.Apps,
                 enabled = enabled,
                 onClick = onSplitTunnelingClick
@@ -494,6 +557,7 @@ private fun ConnectionSettingsContent(
 
 @Composable
 private fun ConnectionModeSettingsContent(
+    strings: AppStrings,
     selectedMode: AndroidConnectionMode,
     enabled: Boolean,
     onBack: () -> Unit,
@@ -508,9 +572,10 @@ private fun ConnectionModeSettingsContent(
             .padding(bottom = 32.dp)
     ) {
         SettingsDetailHeader(
-            title = "Connection Mode",
-            subtitle = selectedMode.subtitle(),
-            onBack = onBack
+            title = strings.connectionMode,
+            subtitle = selectedMode.subtitle(strings),
+            onBack = onBack,
+            backContentDescription = strings.back
         )
 
         Spacer(Modifier.height(20.dp))
@@ -519,6 +584,7 @@ private fun ConnectionModeSettingsContent(
             options.forEach { mode ->
                 ConnectionModeOption(
                     mode = mode,
+                    strings = strings,
                     selected = selectedMode == mode,
                     enabled = enabled,
                     onClick = { onModeSelected(mode) }
@@ -530,6 +596,7 @@ private fun ConnectionModeSettingsContent(
 
 @Composable
 private fun SocksProxySettingsContent(
+    strings: AppStrings,
     proxySettings: AndroidSocksProxySettings,
     enabled: Boolean,
     isConnectionActive: Boolean,
@@ -563,14 +630,16 @@ private fun SocksProxySettingsContent(
             .padding(bottom = 32.dp)
     ) {
         SettingsDetailHeader(
-            title = "SOCKS5 Proxy",
+            title = strings.socks5Proxy,
             subtitle = proxySettings.host,
-            onBack = onBack
+            onBack = onBack,
+            backContentDescription = strings.back
         )
 
         Spacer(Modifier.height(20.dp))
 
         SocksProxySettingsForm(
+            strings = strings,
             host = editedHost,
             port = editedPort,
             username = editedUsername,
@@ -610,6 +679,7 @@ private fun SocksProxySettingsContent(
 
 @Composable
 private fun SplitTunnelingSettingsContent(
+    strings: AppStrings,
     settings: AndroidSplitTunnelSettings,
     enabled: Boolean,
     isConnectionActive: Boolean,
@@ -625,14 +695,16 @@ private fun SplitTunnelingSettingsContent(
             .padding(bottom = 32.dp)
     ) {
         SettingsDetailHeader(
-            title = "Split Tunneling",
-            subtitle = settings.mode.statusTitle(settings),
-            onBack = onBack
+            title = strings.splitTunneling,
+            subtitle = settings.mode.statusTitle(settings, strings),
+            onBack = onBack,
+            backContentDescription = strings.back
         )
 
         Spacer(Modifier.height(18.dp))
 
         SplitTunnelStatusCard(
+            strings = strings,
             settings = settings,
             selectedMode = selectedMode,
             isConnectionActive = isConnectionActive
@@ -640,7 +712,7 @@ private fun SplitTunnelingSettingsContent(
 
         Spacer(Modifier.height(18.dp))
 
-        SettingsSectionLabel("Routing Behavior")
+        SettingsSectionLabel(strings.routingBehavior)
 
         Spacer(Modifier.height(8.dp))
 
@@ -648,6 +720,7 @@ private fun SplitTunnelingSettingsContent(
             AndroidSplitTunnelMode.entries.forEach { mode ->
                 SplitTunnelModeOption(
                     mode = mode,
+                    strings = strings,
                     settings = settings,
                     selected = settings.mode == mode,
                     enabled = enabled,
@@ -659,20 +732,22 @@ private fun SplitTunnelingSettingsContent(
         Spacer(Modifier.height(16.dp))
 
         when (settings.mode) {
-            AndroidSplitTunnelMode.AllApps -> SplitTunnelNoListCard()
+            AndroidSplitTunnelMode.AllApps -> SplitTunnelNoListCard(strings)
             AndroidSplitTunnelMode.ProxySelected -> SplitTunnelAppListAction(
-                title = "Apps Using Olcbox",
-                value = settings.proxyPackages.activeListValue(requireSelection = true),
+                title = strings.appsUsingOlcbox,
+                value = settings.proxyPackages.activeListValue(requireSelection = true, strings = strings),
                 icon = Icons.Outlined.Shield,
                 enabled = enabled,
+                sectionLabel = strings.appList,
                 onClick = { onAppListClick(AndroidSplitTunnelList.Proxy) }
             )
 
             AndroidSplitTunnelMode.BypassSelected -> SplitTunnelAppListAction(
-                title = "Bypassed Apps",
-                value = settings.bypassPackages.activeListValue(requireSelection = false),
+                title = strings.bypassedApps,
+                value = settings.bypassPackages.activeListValue(requireSelection = false, strings = strings),
                 icon = Icons.Outlined.Apps,
                 enabled = enabled,
+                sectionLabel = strings.appList,
                 onClick = { onAppListClick(AndroidSplitTunnelList.Bypass) }
             )
         }
@@ -682,6 +757,7 @@ private fun SplitTunnelingSettingsContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SplitTunnelingAppListContent(
+    strings: AppStrings,
     list: AndroidSplitTunnelList,
     settings: AndroidSplitTunnelSettings,
     installedApps: List<AndroidInstalledApp>,
@@ -853,7 +929,7 @@ private fun SplitTunnelingAppListContent(
             Spacer(Modifier.height(10.dp))
 
             SettingsSwitchRow(
-                title = "Show system apps",
+                title = strings.showSystemApps,
                 value = showSystemAppsValue(),
                 icon = Icons.Outlined.Settings,
                 checked = showSystemApps,
@@ -872,10 +948,13 @@ private fun SplitTunnelingAppListContent(
             RussianBypassPresetChips(
                 active = russianBypassActive,
                 enabled = enabled && russianBypassPackages.isNotEmpty(),
+                activeLabel = strings.ruBypassOn,
+                inactiveLabel = strings.bypassRuApps,
                 value = russianBypassPackages.russianBypassPresetValue(
                     autoCount = activeAutoBypassPackages.size,
                     selectedMatchedCount = selectedRussianBypassPackagesCount,
-                    presetActive = russianBypassActive
+                    presetActive = russianBypassActive,
+                    strings = strings
                 ),
                 onClick = {
                     focusManager.clearFocus()
@@ -912,11 +991,11 @@ private fun SplitTunnelingAppListContent(
 
         if (filteredApps.isEmpty()) {
             EmptyAppsState(
-                title = if (installedApps.isEmpty()) "No apps found" else "No matching apps",
+                title = if (installedApps.isEmpty()) strings.noAppsFound else strings.noMatchingApps,
                 subtitle = if (installedApps.isEmpty()) {
-                    "Install launchable apps to configure routing rules."
+                    strings.installAppsHint
                 } else {
-                    "Try another app name or package."
+                    strings.tryAnotherAppName
                 }
             )
         } else {
@@ -999,6 +1078,7 @@ private fun SplitTunnelingAppListContent(
 
 @Composable
 private fun ApplicationLogsSettingsContent(
+    strings: AppStrings,
     logs: List<String>,
     onBack: () -> Unit,
     onSaveClick: () -> Unit,
@@ -1013,9 +1093,10 @@ private fun ApplicationLogsSettingsContent(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             SettingsDetailHeader(
-                title = "Application Logs",
-                subtitle = if (logs.isEmpty()) "No entries" else "${logs.size} entries",
+                title = strings.applicationLogs,
+                subtitle = strings.logsEntriesCount(logs.size),
                 onBack = onBack,
+                backContentDescription = strings.back,
                 modifier = Modifier.weight(1f)
             )
 
@@ -1023,13 +1104,13 @@ private fun ApplicationLogsSettingsContent(
                 enabled = logs.isNotEmpty(),
                 onClick = onSaveClick
             ) {
-                Text("Save")
+                Text(strings.save)
             }
             TextButton(
                 enabled = logs.isNotEmpty(),
                 onClick = onShareClick
             ) {
-                Text("Share")
+                Text(strings.share)
             }
         }
 
@@ -1055,6 +1136,7 @@ private fun ApplicationLogsSettingsContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun UpdatesSettingsContent(
+    strings: AppStrings,
     settings: AppUpdateSettings,
     statusText: String?,
     downloadProgress: Float?,
@@ -1071,14 +1153,15 @@ private fun UpdatesSettingsContent(
             .padding(top = 16.dp, bottom = 12.dp)
     ) {
         SettingsDetailHeader(
-            title = "Updates",
-            subtitle = "Current version ${CurrentAppInfo.value.version}",
-            onBack = onBack
+            title = strings.updatesTitle,
+            subtitle = strings.currentVersion(CurrentAppInfo.value.version),
+            onBack = onBack,
+            backContentDescription = strings.back
         )
 
         Spacer(Modifier.height(18.dp))
 
-        SettingsSectionLabel("Check Interval")
+        SettingsSectionLabel(strings.checkInterval)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             AppUpdateSettings.INTERVAL_PRESETS.forEach { hours ->
@@ -1103,13 +1186,13 @@ private fun UpdatesSettingsContent(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = "Last check",
+                    text = strings.lastCheck,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = settings.lastCheckAtEpochMs?.formatDateTime() ?: "Not checked yet",
+                    text = settings.lastCheckAtEpochMs?.relativeSubscriptionTime(strings) ?: strings.notCheckedYet,
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1137,13 +1220,14 @@ private fun UpdatesSettingsContent(
                 .fillMaxWidth()
                 .height(52.dp)
         ) {
-            Text("Check now")
+            Text(strings.checkNow)
         }
     }
 }
 
 @Composable
 private fun SubscriptionsSharingSettingsContent(
+    strings: AppStrings,
     subscriptions: List<SubscriptionShareItem>,
     onBack: () -> Unit,
     onCopyConfigClick: () -> Unit,
@@ -1157,9 +1241,10 @@ private fun SubscriptionsSharingSettingsContent(
             .padding(top = 16.dp, bottom = 12.dp)
     ) {
         SettingsDetailHeader(
-            title = "Subscriptions",
-            subtitle = subscriptions.size.subscriptionSummary(),
-            onBack = onBack
+            title = strings.subscriptions,
+            subtitle = subscriptions.size.subscriptionSummary(strings),
+            onBack = onBack,
+            backContentDescription = strings.back
         )
 
         Spacer(Modifier.height(16.dp))
@@ -1173,23 +1258,24 @@ private fun SubscriptionsSharingSettingsContent(
         ) {
             if (subscriptions.isEmpty()) {
                 EmptyAppsState(
-                    title = "No subscriptions",
-                    subtitle = "Import a subscription from the home screen to manage it here."
+                    title = strings.noSubscriptions,
+                    subtitle = strings.noSubscriptionsSubtitle
                 )
             } else {
                 subscriptions.forEach { item ->
                     SubscriptionShareRow(
                         item = item,
+                        strings = strings,
                         onClick = { onSubscriptionClick(item) }
                     )
                 }
             }
 
             Spacer(Modifier.height(6.dp))
-            SettingsSectionLabel("Backup & export")
+            SettingsSectionLabel(strings.backupAndExport)
             SettingsNavigationRow(
-                title = "Export full configuration",
-                value = "Copy all locations to clipboard",
+                title = strings.exportFullConfig,
+                value = strings.exportFullConfigSubtitle,
                 icon = Icons.Outlined.ContentPaste,
                 enabled = true,
                 showChevron = false,
@@ -1201,6 +1287,7 @@ private fun SubscriptionsSharingSettingsContent(
 
 @Composable
 private fun SubscriptionDetailsSettingsContent(
+    strings: AppStrings,
     item: SubscriptionShareItem,
     isRefreshing: Boolean,
     onBack: () -> Unit,
@@ -1227,9 +1314,10 @@ private fun SubscriptionDetailsSettingsContent(
             .padding(top = 16.dp, bottom = 12.dp)
     ) {
         SettingsDetailHeader(
-            title = "Subscription",
+            title = strings.subscriptionDetailsTitle,
             subtitle = item.name,
-            onBack = onBack
+            onBack = onBack,
+            backContentDescription = strings.back
         )
 
         Spacer(Modifier.height(16.dp))
@@ -1241,18 +1329,20 @@ private fun SubscriptionDetailsSettingsContent(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            SettingsSectionLabel("Overview")
-            SubscriptionStatusCard(item)
+            SettingsSectionLabel(strings.overview)
+            SubscriptionStatusCard(item, strings)
 
-            SettingsSectionLabel("Source")
+            SettingsSectionLabel(strings.sourceLabel)
             SubscriptionSourceCard(
                 url = item.url,
+                strings = strings,
                 onShareClick = onShareClick
             )
 
-            SettingsSectionLabel("Updates")
+            SettingsSectionLabel(strings.updatesTitle)
             SubscriptionUpdateCard(
                 item = item,
+                strings = strings,
                 isRefreshing = isRefreshing,
                 onScheduleClick = {
                     refreshIntervalInput = item.manualUpdateIntervalMs
@@ -1266,6 +1356,7 @@ private fun SubscriptionDetailsSettingsContent(
             Spacer(Modifier.height(6.dp))
             SubscriptionDangerAction(
                 locationCount = item.locationCount,
+                strings = strings,
                 onClick = { showDeleteDialog = true }
             )
             Spacer(Modifier.height(18.dp))
@@ -1280,16 +1371,16 @@ private fun SubscriptionDetailsSettingsContent(
 
         AlertDialog(
             onDismissRequest = { showRefreshDialog = false },
-            title = { Text("Refresh schedule") },
+            title = { Text(strings.refreshSchedule) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "Choose how often this subscription should be checked.",
+                        text = strings.refreshScheduleSubtitle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(
-                            "Auto" to "",
+                            strings.auto to "",
                             "1h" to "1h",
                             "6h" to "6h",
                             "1d" to "1d"
@@ -1309,16 +1400,16 @@ private fun SubscriptionDetailsSettingsContent(
                                 .filter { it.isDigit() || it in "smhd" }
                                 .take(8)
                         },
-                        label = { Text("Custom interval") },
-                        placeholder = { Text("Auto") },
+                        label = { Text(strings.customInterval) },
+                        placeholder = { Text(strings.auto) },
                         supportingText = {
                             Text(
                                 if (hasError) {
-                                    "Use 5m–30d, for example 10m, 6h, or 1d"
+                                    strings.subscriptionRefreshRateError
                                 } else if (refreshIntervalInput.isBlank()) {
-                                    item.sourceScheduleDescription()
+                                    item.sourceScheduleDescription(strings)
                                 } else {
-                                    "A custom interval overrides the subscription value."
+                                    strings.customIntervalHint
                                 }
                             )
                         },
@@ -1336,12 +1427,12 @@ private fun SubscriptionDetailsSettingsContent(
                         showRefreshDialog = false
                     }
                 ) {
-                    Text("Save")
+                    Text(strings.save)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRefreshDialog = false }) {
-                    Text("Cancel")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -1350,13 +1441,9 @@ private fun SubscriptionDetailsSettingsContent(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete subscription?") },
+            title = { Text(strings.deleteSubscriptionTitle) },
             text = {
-                Text(
-                    "This will delete “${item.name}” and " +
-                        "${item.locationCount.locationCountLabel()} imported from it. " +
-                        "This cannot be undone."
-                )
+                Text(strings.cannotBeUndone(item.name, item.locationCount.locationCountLabel(strings)))
             },
             confirmButton = {
                 TextButton(
@@ -1365,12 +1452,12 @@ private fun SubscriptionDetailsSettingsContent(
                         onDeleteClick()
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(strings.delete, color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -1380,6 +1467,7 @@ private fun SubscriptionDetailsSettingsContent(
 @Composable
 private fun SubscriptionShareRow(
     item: SubscriptionShareItem,
+    strings: AppStrings,
     onClick: () -> Unit
 ) {
     Surface(
@@ -1408,13 +1496,13 @@ private fun SubscriptionShareRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = item.locationCount.locationCountLabel(),
+                    text = item.locationCount.locationCountLabel(strings),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
                     maxLines = 1
                 )
                 Text(
-                    text = item.listScheduleDescription(),
+                    text = item.listScheduleDescription(strings),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
                     maxLines = 1,
@@ -1432,7 +1520,7 @@ private fun SubscriptionShareRow(
 }
 
 @Composable
-private fun SubscriptionStatusCard(item: SubscriptionShareItem) {
+private fun SubscriptionStatusCard(item: SubscriptionShareItem, strings: AppStrings) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -1444,23 +1532,23 @@ private fun SubscriptionStatusCard(item: SubscriptionShareItem) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             SubscriptionStatusMetric(
-                label = "Locations",
+                label = strings.locationsLabel,
                 value = item.locationCount.toString(),
                 modifier = Modifier.weight(1f)
             )
             SubscriptionStatusDivider()
             SubscriptionStatusMetric(
-                label = "Updated",
-                value = item.lastRefreshAtEpochMs?.relativeSubscriptionTime() ?: "Not yet",
+                label = strings.updatedLabel,
+                value = item.lastRefreshAtEpochMs?.relativeSubscriptionTime(strings) ?: strings.notYet,
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 14.dp)
             )
             SubscriptionStatusDivider()
             SubscriptionStatusMetric(
-                label = "Next",
-                value = item.nextRefreshAtEpochMs?.relativeSubscriptionTime()
-                    ?: "On app start",
+                label = strings.nextLabel,
+                value = item.nextRefreshAtEpochMs?.relativeSubscriptionTime(strings)
+                    ?: strings.onAppStart,
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 14.dp)
@@ -1509,6 +1597,7 @@ private fun SubscriptionStatusDivider() {
 @Composable
 private fun SubscriptionUpdateCard(
     item: SubscriptionShareItem,
+    strings: AppStrings,
     isRefreshing: Boolean,
     onScheduleClick: () -> Unit,
     onRefreshClick: () -> Unit
@@ -1543,14 +1632,14 @@ private fun SubscriptionUpdateCard(
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = item.scheduleDescription(),
+                        text = item.scheduleDescription(strings),
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1
                     )
                     Text(
-                        text = item.scheduleTitle(),
+                        text = item.scheduleTitle(strings),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                         maxLines = 1
@@ -1590,7 +1679,7 @@ private fun SubscriptionUpdateCard(
                     )
                 }
                 Spacer(Modifier.width(8.dp))
-                Text(if (isRefreshing) "Refreshing…" else "Refresh now")
+                Text(if (isRefreshing) strings.refreshingEllipsis else strings.refreshNow)
             }
         }
     }
@@ -1599,6 +1688,7 @@ private fun SubscriptionUpdateCard(
 @Composable
 private fun SubscriptionSourceCard(
     url: String,
+    strings: AppStrings,
     onShareClick: () -> Unit
 ) {
     Surface(
@@ -1629,7 +1719,7 @@ private fun SubscriptionSourceCard(
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
-                    text = url.subscriptionHost(),
+                    text = url.subscriptionHost(strings),
                     color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
@@ -1637,7 +1727,7 @@ private fun SubscriptionSourceCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "Subscription link",
+                    text = strings.subscriptionLink,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp,
                     maxLines = 1
@@ -1646,7 +1736,7 @@ private fun SubscriptionSourceCard(
             IconButton(onClick = onShareClick) {
                 Icon(
                     imageVector = Icons.Outlined.Share,
-                    contentDescription = "Share subscription"
+                    contentDescription = strings.shareSubscriptionContentDescription
                 )
             }
         }
@@ -1871,7 +1961,8 @@ private fun SettingsDetailHeader(
     title: String,
     subtitle: String,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    backContentDescription: String = "Back"
 ) {
     Row(
         modifier = modifier,
@@ -1886,7 +1977,7 @@ private fun SettingsDetailHeader(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Back"
+                    contentDescription = backContentDescription
                 )
             }
         }
@@ -1931,6 +2022,7 @@ private fun HeaderIcon(icon: ImageVector) {
 @Composable
 private fun ConnectionModeOption(
     mode: AndroidConnectionMode,
+    strings: AppStrings,
     selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit
@@ -1939,8 +2031,8 @@ private fun ConnectionModeOption(
         selected = selected,
         enabled = enabled,
         icon = mode.icon(),
-        title = mode.label(),
-        subtitle = mode.description(),
+        title = mode.label(strings),
+        subtitle = mode.description(strings),
         onClick = onClick
     )
 }
@@ -2159,6 +2251,7 @@ private fun SettingsSectionLabel(text: String) {
 
 @Composable
 private fun SplitTunnelStatusCard(
+    strings: AppStrings,
     settings: AndroidSplitTunnelSettings,
     selectedMode: AndroidConnectionMode,
     isConnectionActive: Boolean
@@ -2191,14 +2284,14 @@ private fun SplitTunnelStatusCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = settings.mode.statusTitle(settings),
+                    text = settings.mode.statusTitle(settings, strings),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = splitTunnelStatusSubtitle(selectedMode, isConnectionActive),
+                    text = splitTunnelStatusSubtitle(selectedMode, isConnectionActive, strings),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -2210,7 +2303,7 @@ private fun SplitTunnelStatusCard(
 }
 
 @Composable
-private fun SplitTunnelNoListCard() {
+private fun SplitTunnelNoListCard(strings: AppStrings) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -2240,7 +2333,7 @@ private fun SplitTunnelNoListCard() {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "No app list needed",
+                    text = strings.noAppListNeeded,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -2248,7 +2341,7 @@ private fun SplitTunnelNoListCard() {
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "Every app follows the same TUN route",
+                    text = strings.everyAppFollowsTun,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
                     maxLines = 1,
@@ -2265,9 +2358,10 @@ private fun SplitTunnelAppListAction(
     value: String,
     icon: ImageVector,
     enabled: Boolean,
+    sectionLabel: String,
     onClick: () -> Unit
 ) {
-    SettingsSectionLabel("App List")
+    SettingsSectionLabel(sectionLabel)
 
     Spacer(Modifier.height(8.dp))
 
@@ -2282,6 +2376,7 @@ private fun SplitTunnelAppListAction(
 
 @Composable
 private fun SocksProxySettingsForm(
+    strings: AppStrings,
     host: String,
     port: String,
     username: String,
@@ -2307,20 +2402,20 @@ private fun SocksProxySettingsForm(
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SettingsSectionLabel("Endpoint")
+            SettingsSectionLabel(strings.endpoint)
 
             SocksProxyTextField(
                 value = host,
                 onValueChange = onHostChanged,
-                label = "Listen address",
+                label = strings.listenAddress,
                 placeholder = AndroidSocksProxySettings.DEFAULT_HOST,
                 enabled = enabled,
                 isError = !hostValid,
                 leadingIcon = Icons.Rounded.Public,
                 supportingText = when {
-                    !hostValid -> "Listen address is required"
-                    hostChanged && isConnectionActive -> "Saving restarts the active connection"
-                    hostChanged -> "Unsaved change"
+                    !hostValid -> strings.listenAddressRequired
+                    hostChanged && isConnectionActive -> strings.savingRestartsActiveConnection
+                    hostChanged -> strings.unsavedChange
                     else -> null
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -2329,16 +2424,16 @@ private fun SocksProxySettingsForm(
             SocksProxyTextField(
                 value = port,
                 onValueChange = onPortChanged,
-                label = "Port",
+                label = strings.port,
                 placeholder = AndroidSocksProxySettings.DEFAULT_PORT.toString(),
                 enabled = enabled,
                 isError = port.isBlank() || !portValid,
                 leadingIcon = Icons.Rounded.Public,
                 supportingText = when {
-                    port.isBlank() -> "Port is required"
-                    !portValid -> "Use ${AndroidSocksProxySettings.MIN_PORT}-${AndroidSocksProxySettings.MAX_PORT}"
-                    portChanged && isConnectionActive -> "Saving restarts the active connection"
-                    portChanged -> "Unsaved change"
+                    port.isBlank() -> strings.portRequired
+                    !portValid -> strings.portRange(AndroidSocksProxySettings.MIN_PORT, AndroidSocksProxySettings.MAX_PORT)
+                    portChanged && isConnectionActive -> strings.savingRestartsActiveConnection
+                    portChanged -> strings.unsavedChange
                     else -> null
                 },
                 keyboardOptions = KeyboardOptions(
@@ -2349,20 +2444,20 @@ private fun SocksProxySettingsForm(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SettingsSectionLabel("Credentials")
+            SettingsSectionLabel(strings.credentials)
 
             SocksProxyTextField(
                 value = username,
                 onValueChange = onUsernameChanged,
-                label = "Username",
+                label = strings.username,
                 placeholder = "olcbox...",
                 enabled = enabled,
                 isError = username.isBlank(),
                 leadingIcon = Icons.Rounded.Person,
                 supportingText = when {
-                    username.isBlank() -> "Username is required"
-                    usernameChanged && isConnectionActive -> "Saving restarts the active connection"
-                    usernameChanged -> "Unsaved change"
+                    username.isBlank() -> strings.usernameRequired
+                    usernameChanged && isConnectionActive -> strings.savingRestartsActiveConnection
+                    usernameChanged -> strings.unsavedChange
                     else -> null
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -2371,15 +2466,15 @@ private fun SocksProxySettingsForm(
             SocksProxyTextField(
                 value = password,
                 onValueChange = onPasswordChanged,
-                label = "Password",
-                placeholder = "Generated password",
+                label = strings.password,
+                placeholder = strings.generatedPassword,
                 enabled = enabled,
                 isError = password.isBlank(),
                 leadingIcon = Icons.Rounded.Key,
                 supportingText = when {
-                    password.isBlank() -> "Password is required"
-                    passwordChanged && isConnectionActive -> "Saving restarts the active connection"
-                    passwordChanged -> "Unsaved change"
+                    password.isBlank() -> strings.passwordRequired
+                    passwordChanged && isConnectionActive -> strings.savingRestartsActiveConnection
+                    passwordChanged -> strings.unsavedChange
                     else -> null
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
@@ -2395,7 +2490,7 @@ private fun SocksProxySettingsForm(
                 enabled = enabled,
                 onClick = onRegeneratePassword
             ) {
-                Text("Regenerate password")
+                Text(strings.regeneratePassword)
             }
 
             Spacer(Modifier.width(8.dp))
@@ -2406,7 +2501,7 @@ private fun SocksProxySettingsForm(
             ) {
                 Icon(Icons.Rounded.Check, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Save")
+                Text(strings.save)
             }
         }
     }
@@ -2444,6 +2539,8 @@ private fun RussianBypassPresetChips(
     active: Boolean,
     enabled: Boolean,
     value: String,
+    activeLabel: String,
+    inactiveLabel: String,
     onClick: () -> Unit
 ) {
     Row(
@@ -2456,7 +2553,7 @@ private fun RussianBypassPresetChips(
             enabled = enabled,
             onClick = onClick,
             label = {
-                Text(if (active) "RU bypass on" else "Bypass RU apps")
+                Text(if (active) activeLabel else inactiveLabel)
             },
             leadingIcon = {
                 Icon(
@@ -2682,6 +2779,7 @@ private fun Drawable.toImageBitmap(sizePx: Int): ImageBitmap {
 
 private sealed class AppSettingsRoute(val depth: Int) {
     object Hub : AppSettingsRoute(0)
+    object Language : AppSettingsRoute(1)
     object ConnectionSettings : AppSettingsRoute(1)
     object ConnectionMode : AppSettingsRoute(1)
     object SocksProxy : AppSettingsRoute(1)

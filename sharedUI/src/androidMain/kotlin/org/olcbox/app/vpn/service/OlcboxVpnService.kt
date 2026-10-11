@@ -59,6 +59,9 @@ import org.olcbox.app.vpn.data.KEY_ANDROID_SOCKS_PASSWORD
 import org.olcbox.app.vpn.data.KEY_ANDROID_SOCKS_PORT
 import org.olcbox.app.vpn.data.KEY_ANDROID_SOCKS_USERNAME
 import org.olcbox.app.vpn.data.vpnPrefDataStore
+import org.olcbox.app.ui.localization.AppLanguage
+import org.olcbox.app.ui.localization.AppLocalization
+import org.olcbox.app.vpn.data.KEY_APP_LANGUAGE
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
@@ -175,7 +178,7 @@ class OlcboxVpnService : VpnService() {
                     updateUnderlyingNetwork(null)
                     unbindProcessFromNetwork()
                     setStatus(VpnStatus.Reconnecting)
-                    updateNotification("Waiting for network...")
+                    updateNotification(AppLocalization.strings.waitingForNetwork)
                     addLog("Waiting for upstream network")
                 }
             }
@@ -250,6 +253,11 @@ class OlcboxVpnService : VpnService() {
 
     override fun onCreate() {
         super.onCreate()
+        scope.launch {
+            vpnPrefDataStore.data.first()[KEY_APP_LANGUAGE]?.let { langCode ->
+                AppLocalization.userSelectedLanguage = AppLanguage.fromCode(langCode)
+            }
+        }
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Olcbox::VpnWakeLock")
@@ -281,9 +289,9 @@ class OlcboxVpnService : VpnService() {
         }
         startForeground(
             if (connectionMode == AndroidConnectionMode.Proxy) {
-                "Starting proxy..."
+                AppLocalization.strings.startingProxy
             } else {
-                "Protecting your connection"
+                AppLocalization.strings.protectingYourConnection
             }
         )
         startTunnel(isMigration = false, isRestart = isRestart)
@@ -440,7 +448,7 @@ class OlcboxVpnService : VpnService() {
                     val location = active?.location?.normalized()
                     if (location == null || !location.isComplete()) {
                         setStatus(VpnStatus.Error("No active location"))
-                        updateNotification("Add a location first")
+                        updateNotification(AppLocalization.strings.addLocationFirst)
                         stopTransportProcesses(closeTun = true, waitForSocksPort = false)
                         return@withLock
                     }
@@ -461,12 +469,12 @@ class OlcboxVpnService : VpnService() {
 
     private suspend fun reconnectTransport(location: LocationConfig, requestedGeneration: Long) {
         setStatus(VpnStatus.Reconnecting)
-        updateNotification("Reconnecting...")
+        updateNotification(AppLocalization.strings.reconnecting)
         val upstream = findActiveUpstreamNetwork()
         if (upstream == null) {
             updateUnderlyingNetwork(null)
             unbindProcessFromNetwork()
-            updateNotification("Waiting for network...")
+            updateNotification(AppLocalization.strings.waitingForNetwork)
             addLog("No upstream network; keeping tunnel alive")
             scheduleTransportRetry(requestedGeneration, "no upstream network", NETWORK_RETRY_BASE_DELAY_MS)
             return
@@ -486,7 +494,7 @@ class OlcboxVpnService : VpnService() {
         } else {
             updateUnderlyingNetwork(null)
             setStatus(VpnStatus.Reconnecting)
-            updateNotification("Waiting for transport...")
+            updateNotification(AppLocalization.strings.waitingForTransport)
             scheduleTransportRetry(requestedGeneration, "transport reconnect failed")
         }
     }
@@ -498,7 +506,7 @@ class OlcboxVpnService : VpnService() {
         isRestart: Boolean
     ) {
         setStatus(if (isMigration || isRestart) VpnStatus.Reconnecting else VpnStatus.Connecting)
-        updateNotification("Connecting...")
+        updateNotification(AppLocalization.strings.statusConnecting)
         stopTransportProcesses(closeTun = true, waitForSocksPort = true)
         coroutineContext.ensureActive()
         if (requestedGeneration != generation) return
@@ -509,7 +517,7 @@ class OlcboxVpnService : VpnService() {
             unbindProcessFromNetwork()
             addLog("No upstream network")
             setStatus(VpnStatus.Reconnecting)
-            updateNotification("Waiting for network...")
+            updateNotification(AppLocalization.strings.waitingForNetwork)
             if (isMigration) {
                 scheduleTransportRetry(requestedGeneration, "no upstream network", NETWORK_RETRY_BASE_DELAY_MS)
             }
@@ -521,7 +529,7 @@ class OlcboxVpnService : VpnService() {
             if (isMigration) {
                 updateUnderlyingNetwork(null)
                 setStatus(VpnStatus.Reconnecting)
-                updateNotification("Waiting for transport...")
+                updateNotification(AppLocalization.strings.waitingForTransport)
                 scheduleTransportRetry(requestedGeneration, "transport start failed")
             }
             return
@@ -630,7 +638,7 @@ class OlcboxVpnService : VpnService() {
             stopMobileAndWait()
             if (!staleRequest && setErrorOnFailure) {
                 setStatus(VpnStatus.Error(message))
-                updateNotification("Connection failed")
+                updateNotification(AppLocalization.strings.connectionFailed)
             }
             false
         } finally {
@@ -675,7 +683,7 @@ class OlcboxVpnService : VpnService() {
             if (!ensureNativeLibrariesLoaded()) {
                 addLog("tun2socks native libraries are unavailable")
                 setStatus(VpnStatus.Error("tun2socks native libraries are unavailable"))
-                updateNotification("Tunnel failed")
+                updateNotification(AppLocalization.strings.tunnelFailed)
                 return false
             }
 
@@ -700,7 +708,7 @@ class OlcboxVpnService : VpnService() {
         } catch (e: Exception) {
             addLog("tun2socks start failed: ${e.message}")
             setStatus(VpnStatus.Error(e.message ?: "tun2socks failed"))
-            updateNotification("Tunnel failed")
+            updateNotification(AppLocalization.strings.tunnelFailed)
             false
         }
     }
@@ -722,7 +730,7 @@ class OlcboxVpnService : VpnService() {
         } catch (e: Exception) {
             addLog("VPN establish failed: ${e.message}")
             setStatus(VpnStatus.Error(e.message ?: "VPN establish failed"))
-            updateNotification("VPN tunnel error")
+            updateNotification(AppLocalization.strings.vpnTunnelError)
             null
         }
     }
@@ -743,7 +751,7 @@ class OlcboxVpnService : VpnService() {
                 if (packages.isEmpty()) {
                     addLog("Split tunneling proxy list is empty")
                     setStatus(VpnStatus.Error("Select apps for split tunneling"))
-                    updateNotification("Split tunneling error")
+                    updateNotification(AppLocalization.strings.splitTunnelingError)
                     return false
                 }
 
@@ -751,7 +759,7 @@ class OlcboxVpnService : VpnService() {
                 if (applied == 0) {
                     addLog("Split tunneling has no valid proxy apps")
                     setStatus(VpnStatus.Error("Selected apps are unavailable"))
-                    updateNotification("Split tunneling error")
+                    updateNotification(AppLocalization.strings.splitTunnelingError)
                     false
                 } else {
                     addLog("Split tunneling: $applied selected apps use TUN")
@@ -1195,7 +1203,7 @@ class OlcboxVpnService : VpnService() {
         recoveryJob?.cancel()
         if (setReconnectingImmediately && status is VpnStatus.Connected) {
             setStatus(VpnStatus.Reconnecting)
-            updateNotification("Reconnecting...")
+            updateNotification(AppLocalization.strings.reconnecting)
         }
 
         recoveryJob = scope.launch {
@@ -1209,7 +1217,7 @@ class OlcboxVpnService : VpnService() {
             recoveryRequestedForGeneration = recoveryGeneration
             if (setReconnectingImmediately && currentStatus is VpnStatus.Connected) {
                 setStatus(VpnStatus.Reconnecting)
-                updateNotification("Reconnecting...")
+                updateNotification(AppLocalization.strings.reconnecting)
             }
 
             addLog("$reason; reconnecting transport")
@@ -1472,7 +1480,7 @@ class OlcboxVpnService : VpnService() {
             .setContentIntent(getAppPendingIntent())
             .addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,
-                "Stop",
+                AppLocalization.strings.stop,
                 PendingIntent.getService(
                     this,
                     0,
@@ -1503,7 +1511,7 @@ class OlcboxVpnService : VpnService() {
         }
     }
 
-    private fun connectedNotificationText(): String = "${activeModeLabel()} Connected"
+    private fun connectedNotificationText(): String = "${activeModeLabel()} ${AppLocalization.strings.statusConnected}"
 
     private class AuthenticatedSocksProxy(
         private val listenPort: Int,

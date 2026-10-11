@@ -30,6 +30,8 @@ import org.olcbox.app.update.identity
 import org.olcbox.app.update.isUpdateCheckDue
 import org.olcbox.app.update.shouldShowOffer
 import org.olcbox.app.ui.OlcboxAppContent
+import org.olcbox.app.ui.localization.AppLocalization
+import org.olcbox.app.ui.localization.LocalAppStrings
 import org.olcbox.app.ui.components.ApplicationUpdateOfferSheet
 import org.olcbox.app.ui.features.home.HomeScreenViewModel
 import org.olcbox.app.ui.features.locations.LocationViewModel
@@ -70,6 +72,7 @@ fun AndroidMainScreen(
     }
 
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
     val scope = rememberCoroutineScope()
     val connectionMode by vpnManager.connectionMode.collectAsState()
     val proxySettings by vpnManager.proxySettings.collectAsState()
@@ -166,14 +169,14 @@ fun AndroidMainScreen(
             updateStatusText = "${info.channel.name} update available: ${info.version}"
         } else {
             updateOffer = null
-            updateStatusText = "Olcbox is up to date"
+            updateStatusText = strings.appIsUpToDate
         }
     }
 
     fun checkUpdate(manual: Boolean) {
         val service = appUpdateService
         if (service == null) {
-            updateStatusText = "Update service unavailable"
+            updateStatusText = strings.updateServiceUnavailable
             return
         }
         scope.launch {
@@ -181,7 +184,7 @@ fun AndroidMainScreen(
             val checkStartedAt = kotlin.time.Clock.System.now().toEpochMilliseconds()
             if (!manual && !previousSettings.isUpdateCheckDue(checkStartedAt)) return@launch
 
-            updateStatusText = "Checking ${previousSettings.channel.name.lowercase()}..."
+            updateStatusText = strings.checkingUpdates(previousSettings.channel.name.lowercase())
             val result = service.check(
                 previousSettings.channel,
                 vpnManager.subscriptionFetchProxy()
@@ -199,7 +202,7 @@ fun AndroidMainScreen(
                     }
                 },
                 onFailure = { error ->
-                    updateStatusText = error.message ?: "Update check failed"
+                    updateStatusText = error.message ?: strings.updateCheckFailed
                 }
             )
         }
@@ -210,23 +213,23 @@ fun AndroidMainScreen(
         scope.launch {
             if (!updateInstaller.canRequestPackageInstalls()) {
                 updateInstaller.openUnknownSourcesSettings()
-                updateStatusText = "Allow Olcbox to install updates, then tap Download again"
+                updateStatusText = strings.allowInstallUpdatesHint
                 Toast.makeText(context, updateStatusText, Toast.LENGTH_LONG).show()
                 return@launch
             }
 
             updateDownloadProgress = 0f
-            updateStatusText = "Downloading ${info.asset.name}..."
+            updateStatusText = strings.downloadingUpdate(info.asset.name)
             val result = updateInstaller.download(info.asset) { progress ->
                 updateDownloadProgress = progress
             }
             val file = result.getOrElse { error ->
-                updateStatusText = "Download failed: ${error.message ?: "unknown error"}"
+                updateStatusText = strings.downloadFailed(error.message ?: "unknown error")
                 updateDownloadProgress = null
                 Toast.makeText(context, updateStatusText, Toast.LENGTH_LONG).show()
                 return@launch
             }
-            updateStatusText = "Installing ${info.asset.name}"
+            updateStatusText = strings.installingUpdate(info.asset.name)
             saveUpdateSettings(
                 updateSettings.copy(
                     lastSeenUpdateVersion = info.identity(),
@@ -240,7 +243,7 @@ fun AndroidMainScreen(
                 .onFailure {
                     relaunchAfterInstall = false
                     updateOffer = info
-                    updateStatusText = "Could not open installer: ${it.message}"
+                    updateStatusText = strings.couldNotOpenInstaller(it.message ?: "")
                 }
         }
     }
@@ -310,7 +313,7 @@ fun AndroidMainScreen(
             rawText = rawText,
             onComplete = {
                 reloadLocationsAfterImport {
-                    Toast.makeText(context, "QR imported", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, strings.qrImported, Toast.LENGTH_SHORT).show()
                 }
             }
         )
@@ -375,7 +378,7 @@ fun AndroidMainScreen(
             viewModel.onCopyFullConfigClicked()
         },
         onShareLocationRequested = { config ->
-            shareSheetPayload = "Location QR" to ConfigShareService.olcRtcUri(config)
+            shareSheetPayload = strings.locationQrTitle to ConfigShareService.olcRtcUri(config)
         },
         onSaveLogsRequested = { onSaved, onError ->
             pendingLogSaveCallbacks.value = onSaved to onError
@@ -415,13 +418,14 @@ fun AndroidMainScreen(
             downloadProgress = updateDownloadProgress,
             onLater = { postponeUpdate(info) },
             onDownload = { downloadUpdate(info) },
-            downloadLabel = if (updateInstaller.downloadedFile(info.asset) != null) "Install" else "Download"
+            downloadLabel = if (updateInstaller.downloadedFile(info.asset) != null) strings.install else strings.download
         )
     }
 
     if (isAppSettingsOpen) {
         AppSettingsSheet(
             initialRoute = appSettingsInitialRoute,
+            selectedLanguage = AppLocalization.currentLanguage,
             selectedMode = connectionMode,
             proxySettings = proxySettings,
             splitTunnelSettings = splitTunnelSettings,
@@ -438,9 +442,10 @@ fun AndroidMainScreen(
                 isAppSettingsOpen = false
                 applyPendingSplitTunnelRestart()
             },
+            onLanguageSelected = vpnManager::setAppLanguage,
             onCopyConfigClick = {
                 viewModel.onCopyFullConfigClicked()
-                Toast.makeText(context, "Config copied", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, strings.configCopied, Toast.LENGTH_SHORT).show()
             },
             onSaveLogsClick = {
                 val showToast: (String) -> Unit = { message ->
@@ -464,7 +469,7 @@ fun AndroidMainScreen(
                 checkUpdate(manual = true)
             },
             onSubscriptionShareClick = { url ->
-                shareSheetPayload = "Subscription QR" to ConfigShareService.subscriptionQrText(url)
+                shareSheetPayload = strings.subscriptionQrTitle to ConfigShareService.subscriptionQrText(url)
             },
             onSubscriptionRefreshClick = { url, onFinished ->
                 viewModel.refreshSubscription(url) { updatedCount ->
@@ -472,7 +477,7 @@ fun AndroidMainScreen(
                         viewModel.restartVpnIfRunning()
                         Toast.makeText(
                             context,
-                            if (updatedCount > 0) "Subscription updated" else "Subscription not updated",
+                            if (updatedCount > 0) strings.subscriptionUpdated else strings.subscriptionAlreadyUpToDate,
                             Toast.LENGTH_SHORT
                         ).show()
                         onFinished()
@@ -485,9 +490,9 @@ fun AndroidMainScreen(
                         Toast.makeText(
                             context,
                             if (intervalMs == null) {
-                                "Subscription refresh set to Auto"
+                                strings.subscriptionRefreshSetToAuto
                             } else {
-                                "Subscription refresh rate saved"
+                                strings.subscriptionRefreshRateSaved
                             },
                             Toast.LENGTH_SHORT
                         ).show()
@@ -500,7 +505,7 @@ fun AndroidMainScreen(
                         viewModel.restartVpnIfRunning()
                         Toast.makeText(
                             context,
-                            "Subscription deleted · $removedLocations locations removed",
+                            strings.subscriptionDeletedSummary(removedLocations),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
