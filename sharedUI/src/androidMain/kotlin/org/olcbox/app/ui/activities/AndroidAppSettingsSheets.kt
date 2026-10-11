@@ -127,6 +127,7 @@ import java.util.Date
 @Composable
 internal fun AppSettingsSheet(
     initialRoute: AppSettingsInitialRoute = AppSettingsInitialRoute.Hub,
+    selectedLanguage: AppLanguage = AppLocalization.currentLanguage,
     selectedMode: AndroidConnectionMode,
     proxySettings: AndroidSocksProxySettings,
     splitTunnelSettings: AndroidSplitTunnelSettings,
@@ -186,6 +187,12 @@ internal fun AppSettingsSheet(
             AppSettingsRoute.SocksProxy,
             AppSettingsRoute.SplitTunneling -> AppSettingsRoute.ConnectionSettings
 
+            AppSettingsRoute.Language,
+            AppSettingsRoute.ConnectionSettings,
+            AppSettingsRoute.SubscriptionsSharing,
+            AppSettingsRoute.Updates,
+            AppSettingsRoute.ApplicationLogs -> AppSettingsRoute.Hub
+
             is AppSettingsRoute.SubscriptionDetails -> AppSettingsRoute.SubscriptionsSharing
             else -> AppSettingsRoute.Hub
         }
@@ -228,16 +235,28 @@ internal fun AppSettingsSheet(
         ) { currentRoute ->
             when (currentRoute) {
                 AppSettingsRoute.Hub -> AppSettingsHubContent(
+                    strings = strings,
                     selectedMode = selectedMode,
                     dynamicThemeEnabled = dynamicThemeEnabled,
                     updateSettings = updateSettings,
                     subscriptionsCount = subscriptions.size,
                     enabled = enabled,
                     onDynamicThemeChanged = onDynamicThemeChanged,
+                    onLanguageClick = { route = AppSettingsRoute.Language },
                     onConnectionSettingsClick = { route = AppSettingsRoute.ConnectionSettings },
                     onSubscriptionsSharingClick = { route = AppSettingsRoute.SubscriptionsSharing },
                     onUpdatesClick = { route = AppSettingsRoute.Updates },
                     onApplicationLogsClick = { route = AppSettingsRoute.ApplicationLogs }
+                )
+
+                AppSettingsRoute.Language -> LanguageSettingsContent(
+                    strings = strings,
+                    currentLanguage = selectedLanguage,
+                    onBack = { route = AppSettingsRoute.Hub },
+                    onLanguageSelected = { lang ->
+                        onLanguageSelected(lang)
+                        route = AppSettingsRoute.Hub
+                    }
                 )
 
                 AppSettingsRoute.ConnectionSettings -> ConnectionSettingsContent(
@@ -318,6 +337,7 @@ internal fun AppSettingsSheet(
                     val item = subscriptions.firstOrNull { it.url == currentRoute.subscriptionUrl }
                     if (item == null) {
                         SubscriptionsSharingSettingsContent(
+                            strings = strings,
                             subscriptions = subscriptions,
                             onBack = { route = AppSettingsRoute.Hub },
                             onCopyConfigClick = onCopyConfigClick,
@@ -327,6 +347,7 @@ internal fun AppSettingsSheet(
                         )
                     } else {
                         SubscriptionDetailsSettingsContent(
+                            strings = strings,
                             item = item,
                             isRefreshing = refreshingSubscriptionUrl == item.url,
                             onBack = { route = AppSettingsRoute.SubscriptionsSharing },
@@ -862,11 +883,11 @@ private fun SplitTunnelingAppListContent(
 
     fun showSystemAppsValue(): String {
         return if (systemAppsCount == 0) {
-            "No system apps found"
+            strings.noSystemAppsFound
         } else if (showSystemApps) {
-            "${appCount(systemAppsCount)} included"
+            strings.appsIncluded(systemAppsCount)
         } else {
-            "${appCount(systemAppsCount)} hidden by default"
+            strings.appsHiddenByDefault(systemAppsCount)
         }
     }
 
@@ -893,11 +914,11 @@ private fun SplitTunnelingAppListContent(
             .padding(top = 16.dp, bottom = 12.dp)
     ) {
         SettingsDetailHeader(
-            title = list.title(),
+            title = list.title(strings),
             subtitle = if (list == AndroidSplitTunnelList.Bypass && russianBypassActive) {
-                RUSSIAN_BYPASS_ACCURACY_MESSAGE
+                strings.autoDetectionMayBeInaccurate
             } else {
-                list.selectionSubtitle(selectedPackages.size)
+                list.selectionSubtitle(selectedPackages.size, strings)
             },
             onBack = onBack
         )
@@ -921,7 +942,7 @@ private fun SplitTunnelingAppListContent(
                     contentDescription = null
                 )
             },
-            label = { Text("Search apps") },
+            label = { Text(strings.searchApps) },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
         )
 
@@ -1746,6 +1767,7 @@ private fun SubscriptionSourceCard(
 @Composable
 private fun SubscriptionDangerAction(
     locationCount: Int,
+    strings: AppStrings = LocalAppStrings.current,
     onClick: () -> Unit
 ) {
     Surface(
@@ -1776,14 +1798,14 @@ private fun SubscriptionDangerAction(
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Delete subscription",
+                    text = strings.deleteSubscriptionAction,
                     color = MaterialTheme.colorScheme.error,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = "Remove it and ${locationCount.locationCountLabel()}",
+                    text = strings.deleteSubscriptionSubtitle(locationCount.locationCountLabel(strings)),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
@@ -2040,6 +2062,7 @@ private fun ConnectionModeOption(
 @Composable
 private fun SplitTunnelModeOption(
     mode: AndroidSplitTunnelMode,
+    strings: AppStrings = LocalAppStrings.current,
     settings: AndroidSplitTunnelSettings,
     selected: Boolean,
     enabled: Boolean,
@@ -2049,8 +2072,8 @@ private fun SplitTunnelModeOption(
         selected = selected,
         enabled = enabled,
         icon = mode.icon(),
-        title = mode.title(),
-        subtitle = mode.subtitle(settings),
+        title = mode.title(strings),
+        subtitle = mode.subtitle(settings, strings),
         onClick = onClick
     )
 }
@@ -2798,127 +2821,95 @@ private fun AppSettingsInitialRoute.toRoute(): AppSettingsRoute {
     }
 }
 
-private fun AndroidConnectionMode.label(): String {
+private fun AndroidConnectionMode.label(strings: AppStrings = AppLocalization.strings): String {
     return when (this) {
         AndroidConnectionMode.Tun -> "TUN"
         AndroidConnectionMode.Proxy -> "Proxy"
     }
 }
 
-private fun Int.subscriptionSummary(): String {
-    return when (this) {
-        0 -> "No subscriptions"
-        1 -> "1 subscription"
-        else -> "$this subscriptions"
-    }
+private fun Int.subscriptionSummary(strings: AppStrings = AppLocalization.strings): String {
+    return strings.subscriptionsCount(this)
 }
 
-private fun Int.locationCountLabel(): String {
-    return when (this) {
-        1 -> "1 location"
-        else -> "$this locations"
-    }
+private fun Int.locationCountLabel(strings: AppStrings = AppLocalization.strings): String {
+    return strings.locationsCount(this)
 }
 
-private fun SubscriptionShareItem.scheduleTitle(): String {
-    return if (manualUpdateIntervalMs == null) "Automatic" else "Custom schedule"
+private fun SubscriptionShareItem.scheduleTitle(strings: AppStrings = AppLocalization.strings): String {
+    return if (manualUpdateIntervalMs == null) strings.scheduleAutomatic else strings.customSchedule
 }
 
-private fun SubscriptionShareItem.scheduleDescription(): String {
+private fun SubscriptionShareItem.scheduleDescription(strings: AppStrings = AppLocalization.strings): String {
     val interval = updateIntervalMs
         ?: updateIntervalHours?.times(60L * 60L * 1_000L)
-    return interval?.friendlySubscriptionSchedule() ?: "Uses the subscription schedule"
+    return interval?.friendlySubscriptionSchedule(strings) ?: strings.usesSubscriptionSchedule
 }
 
-private fun SubscriptionShareItem.sourceScheduleDescription(): String {
+private fun SubscriptionShareItem.sourceScheduleDescription(strings: AppStrings = AppLocalization.strings): String {
     val interval = sourceUpdateIntervalMs
         ?: updateIntervalHours?.times(60L * 60L * 1_000L)
-    return interval?.let { "Auto uses ${it.friendlySubscriptionSchedule().lowercase()}." }
-        ?: "Auto uses default schedule."
+    return interval?.let { strings.autoUsesSchedule(it.friendlySubscriptionSchedule(strings).lowercase()) }
+        ?: strings.autoUsesDefaultSchedule
 }
 
-private fun SubscriptionShareItem.listScheduleDescription(): String {
+private fun SubscriptionShareItem.listScheduleDescription(strings: AppStrings = AppLocalization.strings): String {
     val schedule = if (manualUpdateIntervalMs == null) {
-        "Automatic"
+        strings.scheduleAutomatic
     } else {
-        updateIntervalMs?.friendlySubscriptionSchedule() ?: "Custom schedule"
+        updateIntervalMs?.friendlySubscriptionSchedule(strings) ?: strings.customSchedule
     }
     val refreshed = lastRefreshAtEpochMs
-        ?.relativeSubscriptionTime()
-        ?.let { "Updated $it" }
-        ?: "Not updated yet"
+        ?.relativeSubscriptionTime(strings)
+        ?.let { strings.updatedRelative(it) }
+        ?: strings.notUpdatedYet
     return "$schedule · $refreshed"
 }
 
-private fun String.subscriptionHost(): String {
+private fun String.subscriptionHost(strings: AppStrings = AppLocalization.strings): String {
     return substringAfter("://", this)
         .substringBefore('/')
         .substringBefore('?')
-        .ifBlank { "Subscription source" }
+        .ifBlank { strings.subscriptionSource }
 }
 
-private fun Long.friendlySubscriptionSchedule(): String {
-    val minuteMs = 60L * 1_000L
-    val hourMs = 60L * minuteMs
-    val dayMs = 24L * hourMs
-    return when {
-        this == dayMs -> "Every day"
-        this % dayMs == 0L -> "Every ${this / dayMs} days"
-        this == hourMs -> "Every hour"
-        this % hourMs == 0L -> "Every ${this / hourMs} hours"
-        this == minuteMs -> "Every minute"
-        else -> "Every ${(this / minuteMs).coerceAtLeast(1L)} minutes"
-    }
+private fun Long.friendlySubscriptionSchedule(strings: AppStrings = AppLocalization.strings): String {
+    return strings.friendlySchedule(this)
 }
 
-private fun Long.relativeSubscriptionTime(): String {
-    val deltaMs = this - System.currentTimeMillis()
-    val isFuture = deltaMs > 0L
-    val absoluteMs = if (deltaMs == Long.MIN_VALUE) Long.MAX_VALUE else {
-        if (deltaMs < 0L) -deltaMs else deltaMs
-    }
-    val minuteMs = 60L * 1_000L
-    val hourMs = 60L * minuteMs
-    val dayMs = 24L * hourMs
-    val value = when {
-        absoluteMs < minuteMs -> "just now"
-        absoluteMs < hourMs -> "${absoluteMs / minuteMs} min"
-        absoluteMs < dayMs -> "${absoluteMs / hourMs} hr"
-        absoluteMs < 7L * dayMs -> "${absoluteMs / dayMs} d"
-        else -> return formatDateTime()
-    }
-    return if (value == "just now") value else if (isFuture) "in $value" else "$value ago"
+private fun Long.relativeSubscriptionTime(strings: AppStrings = AppLocalization.strings): String {
+    return strings.relativeTime(this, System.currentTimeMillis())
 }
 
 private fun Long.formatDateTime(): String {
     return DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(this))
 }
 
-private fun AndroidConnectionMode.shortLabel(): String {
+private fun AndroidConnectionMode.shortLabel(strings: AppStrings = AppLocalization.strings): String {
     return when (this) {
         AndroidConnectionMode.Tun -> "TUN"
         AndroidConnectionMode.Proxy -> "SOCKS"
     }
 }
 
-private fun AndroidConnectionMode.subtitle(): String {
+private fun AndroidConnectionMode.subtitle(strings: AppStrings = AppLocalization.strings): String {
     return when (this) {
-        AndroidConnectionMode.Tun -> "Full tunnel"
-        AndroidConnectionMode.Proxy -> "Local SOCKS5 proxy"
+        AndroidConnectionMode.Tun -> strings.modeTunSubtitle
+        AndroidConnectionMode.Proxy -> strings.modeProxySubtitle
     }
 }
 
-private fun AndroidConnectionMode.settingsSummary(): String {
+private fun AndroidConnectionMode.settingsSummary(strings: AppStrings = AppLocalization.strings): String {
     return when (this) {
-        AndroidConnectionMode.Tun -> "TUN · Full tunnel"
-        AndroidConnectionMode.Proxy -> "Proxy · Local SOCKS5"
+        AndroidConnectionMode.Tun -> strings.modeTunSummary
+        AndroidConnectionMode.Proxy -> strings.modeProxySummary
     }
 }
 
-private fun AndroidConnectionMode.description(): String {
+private fun AndroidConnectionMode.description(strings: AppStrings = AppLocalization.strings): String {
     return when (this) {
-        AndroidConnectionMode.Tun -> "System VPN interface"
-        AndroidConnectionMode.Proxy -> "Local SOCKS endpoint"
+        AndroidConnectionMode.Tun -> strings.modeTunDesc
+        AndroidConnectionMode.Proxy -> strings.modeProxyDesc
     }
 }
 
@@ -2927,19 +2918,19 @@ private fun AndroidConnectionMode.icon() = when (this) {
     AndroidConnectionMode.Proxy -> Icons.Rounded.Public
 }
 
-private fun AndroidSplitTunnelSettings.settingsSummary(): String {
+private fun AndroidSplitTunnelSettings.settingsSummary(strings: AppStrings = AppLocalization.strings): String {
     return when (mode) {
-        AndroidSplitTunnelMode.AllApps -> "All apps"
+        AndroidSplitTunnelMode.AllApps -> strings.splitTunnelingModeAll
         AndroidSplitTunnelMode.ProxySelected -> if (proxyPackages.isEmpty()) {
-            "Selected apps only"
+            strings.splitTunnelingModeProxySelected
         } else {
-            "Only ${appCount(proxyPackages.size)}"
+            strings.appsCountOnly(proxyPackages.size)
         }
 
         AndroidSplitTunnelMode.BypassSelected -> if (bypassPackages.isEmpty()) {
-            "Bypass selected apps"
+            strings.splitTunnelingModeBypassSelected
         } else {
-            "${appCount(bypassPackages.size)} bypassed"
+            strings.appsCountBypassed(bypassPackages.size)
         }
     }
 }
@@ -2951,44 +2942,44 @@ private fun AndroidSplitTunnelSettings.packagesFor(list: AndroidSplitTunnelList)
     }
 }
 
-private fun AndroidSplitTunnelMode.title(): String {
+private fun AndroidSplitTunnelMode.title(strings: AppStrings = AppLocalization.strings): String {
     return when (this) {
-        AndroidSplitTunnelMode.AllApps -> "All Apps"
-        AndroidSplitTunnelMode.ProxySelected -> "Selected Apps Only"
-        AndroidSplitTunnelMode.BypassSelected -> "Bypass Selected"
+        AndroidSplitTunnelMode.AllApps -> strings.splitTunnelingModeAll
+        AndroidSplitTunnelMode.ProxySelected -> strings.splitTunnelingModeProxySelected
+        AndroidSplitTunnelMode.BypassSelected -> strings.splitTunnelingModeBypassSelected
     }
 }
 
-private fun AndroidSplitTunnelMode.subtitle(settings: AndroidSplitTunnelSettings): String {
+private fun AndroidSplitTunnelMode.subtitle(settings: AndroidSplitTunnelSettings, strings: AppStrings = AppLocalization.strings): String {
     return when (this) {
-        AndroidSplitTunnelMode.AllApps -> "Every app uses Olcbox"
+        AndroidSplitTunnelMode.AllApps -> strings.everyAppUsesOlcbox
         AndroidSplitTunnelMode.ProxySelected -> if (settings.proxyPackages.isEmpty()) {
-            "Choose apps that use Olcbox"
+            strings.chooseAppsUsingOlcbox
         } else {
-            "${appCount(settings.proxyPackages.size)} use Olcbox"
+            strings.appsCountUseOlcbox(settings.proxyPackages.size)
         }
 
         AndroidSplitTunnelMode.BypassSelected -> if (settings.bypassPackages.isEmpty()) {
-            "Choose apps that bypass Olcbox"
+            strings.chooseAppsBypassingOlcbox
         } else {
-            "${appCount(settings.bypassPackages.size)} bypass Olcbox"
+            strings.appsCountBypassed(settings.bypassPackages.size)
         }
     }
 }
 
-private fun AndroidSplitTunnelMode.statusTitle(settings: AndroidSplitTunnelSettings): String {
+private fun AndroidSplitTunnelMode.statusTitle(settings: AndroidSplitTunnelSettings, strings: AppStrings = AppLocalization.strings): String {
     return when (this) {
-        AndroidSplitTunnelMode.AllApps -> "All apps use Olcbox"
+        AndroidSplitTunnelMode.AllApps -> strings.allAppsUseOlcbox
         AndroidSplitTunnelMode.ProxySelected -> if (settings.proxyPackages.isEmpty()) {
-            "No apps selected"
+            strings.noAppsSelected
         } else {
-            "Only ${appCount(settings.proxyPackages.size)} use Olcbox"
+            strings.appsCountUseOlcbox(settings.proxyPackages.size)
         }
 
         AndroidSplitTunnelMode.BypassSelected -> if (settings.bypassPackages.isEmpty()) {
-            "No apps bypass Olcbox"
+            strings.noAppsBypassOlcbox
         } else {
-            "${appCount(settings.bypassPackages.size)} bypass Olcbox"
+            strings.appsCountBypassed(settings.bypassPackages.size)
         }
     }
 }
@@ -2999,32 +2990,33 @@ private fun AndroidSplitTunnelMode.icon() = when (this) {
     AndroidSplitTunnelMode.BypassSelected -> Icons.Outlined.Apps
 }
 
-private fun AndroidSplitTunnelList.title(): String {
+private fun AndroidSplitTunnelList.title(strings: AppStrings = AppLocalization.strings): String {
     return when (this) {
-        AndroidSplitTunnelList.Proxy -> "Apps Using Olcbox"
-        AndroidSplitTunnelList.Bypass -> "Bypassed Apps"
+        AndroidSplitTunnelList.Proxy -> strings.appsUsingOlcbox
+        AndroidSplitTunnelList.Bypass -> strings.bypassedApps
     }
 }
 
-private fun AndroidSplitTunnelList.selectionSubtitle(count: Int): String {
+private fun AndroidSplitTunnelList.selectionSubtitle(count: Int, strings: AppStrings = AppLocalization.strings): String {
     return when (this) {
-        AndroidSplitTunnelList.Proxy -> "${appCount(count)} use Olcbox"
-        AndroidSplitTunnelList.Bypass -> "${appCount(count)} bypassed"
+        AndroidSplitTunnelList.Proxy -> strings.appsCountUseOlcbox(count)
+        AndroidSplitTunnelList.Bypass -> strings.appsCountBypassed(count)
     }
 }
 
 private fun Set<String>.russianBypassPresetValue(
     autoCount: Int,
     selectedMatchedCount: Int,
-    presetActive: Boolean
+    presetActive: Boolean,
+    strings: AppStrings = AppLocalization.strings
 ): String {
     return when {
-        isEmpty() -> "No matching installed apps"
-        !presetActive -> "${appCount(size)} matched by package"
-        selectedMatchedCount == 0 -> "No RU apps selected"
-        autoCount == 0 -> "${appCount(selectedMatchedCount)} already selected"
-        autoCount == selectedMatchedCount -> "${appCount(autoCount)} auto-bypassed"
-        else -> "$autoCount auto · ${selectedMatchedCount - autoCount} manual"
+        isEmpty() -> strings.ruBypassNoMatchingApps
+        !presetActive -> strings.ruBypassMatchedByPackage(size)
+        selectedMatchedCount == 0 -> strings.ruBypassNoAppsSelected
+        autoCount == 0 -> strings.ruBypassAlreadySelected(selectedMatchedCount)
+        autoCount == selectedMatchedCount -> strings.ruBypassAutoBypassed(autoCount)
+        else -> strings.ruBypassAutoAndManual(autoCount, selectedMatchedCount - autoCount)
     }
 }
 
@@ -3034,22 +3026,23 @@ private fun String.matchesRussianBypassPackage(): Boolean {
             RUSSIAN_BYPASS_PACKAGE_PREFIXES.any { packageName.startsWith(it) }
 }
 
-private fun Set<String>.activeListValue(requireSelection: Boolean): String {
+private fun Set<String>.activeListValue(requireSelection: Boolean, strings: AppStrings = AppLocalization.strings): String {
     return when {
-        isNotEmpty() -> appCount(size)
-        requireSelection -> "Required"
-        else -> "No bypassed apps"
+        isNotEmpty() -> appCount(size, strings)
+        requireSelection -> strings.required
+        else -> strings.noBypassedApps
     }
 }
 
 private fun splitTunnelStatusSubtitle(
     selectedMode: AndroidConnectionMode,
-    isConnectionActive: Boolean
+    isConnectionActive: Boolean,
+    strings: AppStrings = AppLocalization.strings
 ): String {
     return when {
-        selectedMode == AndroidConnectionMode.Proxy -> "Saved for TUN mode"
-        isConnectionActive -> "Applies when settings closes"
-        else -> "TUN mode routing rule"
+        selectedMode == AndroidConnectionMode.Proxy -> strings.savedForTunMode
+        isConnectionActive -> strings.appliesWhenSettingsCloses
+        else -> strings.tunModeRoutingRule
     }
 }
 
@@ -3064,8 +3057,8 @@ private fun String.initials(): String {
     }
 }
 
-private fun appCount(count: Int): String {
-    return if (count == 1) "1 app" else "$count apps"
+private fun appCount(count: Int, strings: AppStrings = AppLocalization.strings): String {
+    return strings.appsCount(count)
 }
 
 private data class AndroidAppListEntry(
